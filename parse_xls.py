@@ -10,6 +10,8 @@ from distutils.command.build_scripts import first_line_re
 
 import xlrd, re, os
 
+
+####### Classes #######
 class DataBase(object):
     def __init__(self, name):
         self.name = name
@@ -38,6 +40,11 @@ class Table(object):
 
     def __repr__(self):
         return self.name
+
+####### End Classes #######
+
+
+####### Parsing #######
 
 def filter_header(header_name):
     return re.sub('\W', '_', header_name).upper()
@@ -113,3 +120,4 @@ def generate_sheet_rows(sheet, first_row, last_row, first_col, last_col):
         yield row_values
         row +=1
 
+####### End Parsing #######
