@@ -5,11 +5,11 @@
 
 import sys
 import sqlite3
-import parse_xls
+import XqlParser
 
 class DBWriter(object):
 	def __init__(self, file_path):
-		self.XQL_db_object = parse_xls.parse_xls_to_db(file_path)
+		self.XQL_db_object = XqlParser.parse_xls_to_db(file_path)
 		self.db_location = None
 
 	def create_db(self):
