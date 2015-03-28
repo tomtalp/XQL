@@ -67,17 +67,18 @@ def parse_sheet_to_table(sheet):
     for col in xrange(first_col, last_col + 1):
         table.add_header(sheet.cell_value(first_row, col))
 
-
     table.gen_rows = generate_sheet_rows(sheet, first_row, last_row, first_col, last_col)
 
     return table
 
 def find_first_cell(sheet, last_row, last_col):
+    """ Returns the first row and column of the table in the sheet """
     first_row = find_first_row(sheet, last_row, last_col)
     first_col = find_first_col(sheet, last_row, last_col)
     return (first_row, first_col)
 
 def find_first_row(sheet, last_row, last_col):
+    """ recursive func to find the first col """
     if last_row == 0:
         return 0
     elif not sheet.cell_value(last_row, last_col):
@@ -85,6 +86,7 @@ def find_first_row(sheet, last_row, last_col):
     return find_first_row(sheet, last_row - 1, last_col)
 
 def find_first_col(sheet, last_row, last_col):
+    """ recursive func to find the first column """
     if last_col == 0:
         return 0
     elif not sheet.cell_value(last_row, last_col):
