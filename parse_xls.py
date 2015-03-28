@@ -18,9 +18,6 @@ class DataBase(object):
     def add_table(self, table):
         self.tables.append(table)
 
-    def __str__(self):
-        print self.name
-
     def __repr__(self):
         return self.__str__()
 
