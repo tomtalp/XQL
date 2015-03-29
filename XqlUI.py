@@ -18,7 +18,7 @@ class MainWidget(QtGui.QMainWindow):
         """
 		Handler for the 'open file' button. User picks a file and
 		"""
-        filename = QtGui.QFileDialog.getOpenFileName(self, 'Pick an Excel file', os.getenv('HOME'),
+        filename = QtGui.QFileDialog.getOpenFileName(self, 'Pick an Excel file', os.getenv('USERPROFILE'),
                                                      "Excel Files (*.xls *.xlsx)")
 
         # Change the screen only if a file was selected
@@ -66,4 +66,3 @@ class MainWidget(QtGui.QMainWindow):
 app = QtGui.QApplication(sys.argv)
 w = MainWidget()
 sys.exit(app.exec_())
-
