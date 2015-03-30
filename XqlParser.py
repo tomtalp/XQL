@@ -20,6 +20,9 @@ class XqlDB(object):
     def add_table(self, table):
         self.tables.append(table)
 
+    def __str__(self):
+        return self.name
+
     def __repr__(self):
         return self.__str__()
 
@@ -50,36 +53,46 @@ def filter_header(header_name):
     return re.sub('\W', '_', header_name).upper()
 
 def parse_xls_to_db(xls_path):
-    file_name = os.path.basename(xls_path)
+    file_name = os.path.splitext(os.path.basename(xls_path))[0]
     parsed_db = XqlDB(file_name)
     source_workbook = xlrd.open_workbook(xls_path)
 
     #Parse each sheet in the xls file
     for sheet in source_workbook.sheets():
         table = parse_sheet_to_table(sheet)
-        parsed_db.add_table(table)
+
+        #Add only if table exists
+        if table:
+            parsed_db.add_table(table)
 
     return parsed_db
 
 def parse_sheet_to_table(sheet):
-    table = XqlTable(sheet.name)
+
     last_row = sheet.nrows - 1
     last_col = sheet.ncols - 1
 
-    #If we want to find where the table actually starts (might not start at 0, 0),
-    #we have to start from the last filled cell and go back until we get to the first cell
-    first_row, first_col = find_first_cell(sheet, last_row, last_col)
-    
-    #Add headers
-    for col in xrange(first_col, last_col + 1):
-        header_name = sheet.cell_value(first_row, col)
-        header_xlrd_type = get_column_xlrd_type(sheet, col, first_row, last_row)
-        header_sqlite_type = xlrd_type_to_sqlite_type(header_xlrd_type)
-        table.add_header(header_name, header_sqlite_type)
+    #minimum 1 rows (only header)
+    if last_col >= 0:
 
-    table.gen_rows = generate_sheet_rows(sheet, first_row, last_row, first_col, last_col)
+        table = XqlTable(sheet.name)
 
-    return table
+        #If we want to find where the table actually starts (might not start at 0, 0),
+        #we have to start from the last filled cell and go back until we get to the first cell
+        first_row, first_col = find_first_cell(sheet, last_row, last_col)
+
+        #Add headers
+        for col in xrange(first_col, last_col + 1):
+            header_name = sheet.cell_value(first_row, col)
+            header_xlrd_type = get_column_xlrd_type(sheet, col, first_row, last_row)
+            header_sqlite_type = xlrd_type_to_sqlite_type(header_xlrd_type)
+            table.add_header(header_name, header_sqlite_type)
+
+        table.gen_rows = generate_sheet_rows(sheet, first_row, last_row, first_col, last_col)
+
+        return table
+
+    return False
 
 def find_first_cell(sheet, last_row, last_col):
     """ Returns the first row and column of the table in the sheet """
@@ -118,7 +131,7 @@ def generate_sheet_rows(sheet, first_row, last_row, first_col, last_col):
     #Start from rows and not headers
     row = first_row + 1
 
-    while row < last_row:
+    while row <= last_row:
         row_values = {}
         for col in xrange(first_col, last_col + 1):
             header_name = filter_header(sheet.cell_value(first_row, col))
