@@ -36,19 +36,25 @@ class DBWriter(object):
 
 	def write_to_db(self):
 		"""
-		Main writing function - write all the tables to the DB
+		Create an SQLite DB from the XqlDB object.
+		SQLite DB will be store in memory.
 		"""
-		self._db_conn = sqlite3.connect(":memory:")
+
+		self._db_conn = sqlite3.connect(":memory:") # Write to memory and not to disk to avoid dbs staying on the users system after program has exited (will happen in case of crashes i.e)
 		self._cursor = self._db_conn.cursor()
 
 		for tb in self.XqlDB.tables:
+			print 'starting with '
+			print tb
 			self.write_tb(tb)
+			print 'done with '
+			print tb
 
 
 
 	def write_tb(self, tb):
 		"""
-		Create & write an XqlTable object to the Sqlite DB
+		Create & write an XqlTable object to the SQLite DB
 		"""
 		
 		cols_for_query = ', '.join([k + ' ' + v for k, v in tb.headers.iteritems()]) # Build a string of headers and their type for the sql query
@@ -60,15 +66,38 @@ class DBWriter(object):
 		""".format(tb_name = tb.name.upper(), cols = cols_for_query)
 
 		self._cursor.execute(creation_query)
+
+
+		# Insert data
+		for row in tb.gen_rows:
+			insertion_query = """
+			INSERT INTO {tb_name}
+			({cols})
+			VALUES
+			({vals})
+			""".format(tb_name = tb.name, cols = ', '.join(row.keys()), vals = ', '.join(['?' for val in row.values()])) # ? is the Python SQLite library place holder for variables.
+
+			self._cursor.execute(insertion_query, row.values())
+
+
 		self._db_conn.commit()
 
 
-	def get_creation_query(self, XqlTable):
-		pass
+
+
+	def check_data(self, tb_name):
+		"""
+		Test function for returning the inserted data
+		"""
+		return self._cursor.execute('select * from {tb_name}'.format(tb_name = tb_name)).fetchall()
 
 
 
-
-file_path = '/home/user/Desktop/big_xl.xlsx'
+#file_path = '/home/user/Desktop/big_xl.xlsx'
+file_path = '/home/user/Desktop/Transactions.xls'
 
 writer = DBWriter(file_path)
+
+writer.write_to_db()
+
+r = writer.check_data('sheet1')
