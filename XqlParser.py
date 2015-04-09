@@ -187,7 +187,7 @@ def get_column_xlrd_type(sheet, col, first_row, last_row):
         if sheet.cell_value(row, col):
             return sheet.cell_type(row, col)
 
-####### End Parsing ####### end
+####### End Parsing ###### end
 
 if __name__ == '__main__':
     xls_path = raw_input("Enter xls path:\n")
