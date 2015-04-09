@@ -217,5 +217,4 @@ def main():
         rows_per_iter = input("Enter number of rows you want the generator to return:\n")
         while not isinstance(rows_per_iter, int):
             rows_per_iter = input("Enter number of rows you want the generator to return:\n")
-        db = parse_xls_to_db(xls_path, rows_per_iter)
-        
+        return parse_xls_to_db(xls_path, rows_per_iter)
