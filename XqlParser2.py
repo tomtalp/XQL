@@ -163,4 +163,4 @@ def get_column_xlrd_type(sheet, col, first_row, last_row):
         if sheet.cell_value(row, col):
             return sheet.cell_type(row, col)
 
-####### End Parsing ####### end
+####### End Parsing #######
