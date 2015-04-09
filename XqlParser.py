@@ -8,7 +8,7 @@
 ################################################################################################
 from distutils.command.build_scripts import first_line_re
 
-import xlrd, re, os
+import xlrd, re, os, random
 
 
 ####### Classes #######
@@ -136,15 +136,18 @@ def find_first_col(sheet, first_row, last_col):
 def generate_sheet_rows(workbook, sheet, first_row, last_row, first_col, last_col, table_headers, date_cols, rows_per_iter = 5):
     """
 
-    returns a generator and yields every time a dictionary having the cell_value as value and header_name as key
+    returns a generator and yields a dictionary having the cell_value as value and header_name as key
 
     """
+
     #Start from rows and not headers
     row = first_row + 1
 
     while row <= last_row:
         rows_block = []
         origin_row = row
+
+        #yields a list wirh rows_per_iter rows
         while row < origin_row + rows_per_iter and row <= last_row:
             row_values = {}
             for col in xrange(first_col, last_col + 1):
@@ -152,11 +155,10 @@ def generate_sheet_rows(workbook, sheet, first_row, last_row, first_col, last_co
 
                 value = sheet.cell_value(row, col)
 
-                #If it's a date, make it into a datetime tuple
+                #If it's a date, convert it into a datetime tuple
                 if col in date_cols:
                     if sheet.cell_type(row, col) == 3:
                         value = xlrd.xldate_as_tuple(value, workbook.datemode)
-
                 row_values[header_name] = value
             rows_block.append(row_values)
             row += 1
@@ -179,21 +181,41 @@ def xlrd_type_to_sqlite_type(code):
 
 def get_column_xlrd_type(sheet, col, first_row, last_row):
     """
-    finds the columns type by scanning the column untill it find a cell with a value
+    finds the columns type by scanning 20% of cells. if it finds more than 1 type, its varchar
     """
+    count = 1
+    cell_value = sheet.cell_type(random.randint(first_row + 1, first_row + 4), col)
 
-    #We check only from second row, because the header type isn't interesting
-    for row in xrange(first_row + 1, last_row):
-        if sheet.cell_value(row, col):
-            return sheet.cell_type(row, col)
+    for i in xrange(first_row + 5, last_row + 1, 5):
+        count += 1
+
+        if i + 5 >= last_row:
+            until = last_row
+        else:
+            until = i + 5
+        temp_value = sheet.cell_type(random.randint(i, until), col)
+
+        #if 2 types are found, return 1 (VARCHAR)
+        #print cell_value, temp_value
+        if cell_value != 0 and temp_value != cell_value:
+            return cell_value
+
+        elif temp_value != 0:
+            cell_value = temp_value
+    else:
+        #No 2 cells have different values
+        return cell_value
+
 
 ####### End Parsing ###### end
 
-if __name__ == '__main__':
-    xls_path = raw_input("Enter xls path:\n")
-    while not (os.path.isfile(xls_path) and os.path.splitext(xls_path)[1] in ('.xls', '.xlsx')):
+def main():
+    if __name__ == '__main__':
         xls_path = raw_input("Enter xls path:\n")
-    rows_per_iter = input("Enter number of rows you want the generator to return:\n")
-    while not isinstance(rows_per_iter, int):
+        while not (os.path.isfile(xls_path) and os.path.splitext(xls_path)[1] in ('.xls', '.xlsx')):
+            xls_path = raw_input("Enter xls path:\n")
         rows_per_iter = input("Enter number of rows you want the generator to return:\n")
-    db = parse_xls_to_db(xls_path, rows_per_iter)
+        while not isinstance(rows_per_iter, int):
+            rows_per_iter = input("Enter number of rows you want the generator to return:\n")
+        db = parse_xls_to_db(xls_path, rows_per_iter)
+        
