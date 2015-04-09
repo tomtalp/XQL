@@ -94,10 +94,10 @@ class DBWriter(object):
 
 
 #file_path = '/home/user/Desktop/big_xl.xlsx'
-file_path = '/home/user/Desktop/Transactions.xls'
+# file_path = '/home/user/Desktop/Transactions.xls'
 
-writer = DBWriter(file_path)
+# writer = DBWriter(file_path)
 
-writer.write_to_db()
+# writer.write_to_db()
 
-r = writer.check_data('sheet1')
+# r = writer.check_data('sheet1')

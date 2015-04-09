@@ -1,4 +1,5 @@
 from PyQt4 import QtGui, QtCore
+from XqlDbWriter import DBWriter
 import sys
 import os
 
@@ -18,24 +19,29 @@ class MainWidget(QtGui.QMainWindow):
         """
         Handler for the 'open file' button. User picks a file and
         """
-        filename = QtGui.QFileDialog.getOpenFileName(self, 'Pick an Excel file', os.getenv(get_os_env()),
+        self.file_path = QtGui.QFileDialog.getOpenFileName(self, 'Pick an Excel file', os.getenv(get_os_env()),
                                                      "Excel Files (*.xls *.xlsx)")
 
+        self.file_path = str(self.file_path) # Convert QString to str
+
         # Change the screen only if a file was selected
-        if filename:
-            self.filePathLabel.setText("Selected {filename}".format(filename = filename))
+        if self.file_path:
+            self.filePathLabel.setText("Selected {file_path}".format(file_path = self.file_path))
             self.browseBtn.setText('Change file?')
             self.startBtn.setEnabled(True)  # Activate the button that begins the process
+            self.tabWidget.setToolTip("Press the 'Go!' button to begin working")
 
     def beginProcess(self):
         """
         Begin writing the DB behind the scenes, clear the screen and when done transform the screen to the query interface.
         """
+        writer = DBWriter(self.file_path)
+        writer.write_to_db()
 
-        print "Woohooooo!"
+        self.startBtn.setEnabled(False) # Once DB has been initialized, user shouldn't be able to click this button to init again.
+        self.tabWidget.setEnabled(True) # The tabs can now be used
+        self.tabWidget.setToolTip("") # Cancel the tooltip that instructs user to pick a file.
 
-        # TODO: Everything in the comment above :)
-        pass
 
 
     def initUI(self):
@@ -43,7 +49,7 @@ class MainWidget(QtGui.QMainWindow):
         Main function for initializing & designing the UI
         """
 
-        self.setGeometry(200, 200, 1130, 786)
+        self.setGeometry(100, 100, 1250, 850)
         self.setWindowTitle("XQL")
 
         self.centralWidget = QtGui.QWidget(self)
@@ -65,7 +71,6 @@ class MainWidget(QtGui.QMainWindow):
 
         self.horizontalLayout.addLayout(self.horizontalLayout_2)
 
-        # 
         self.startBtn = QtGui.QPushButton("Go!", self.centralWidget)
         self.startBtn.setEnabled(False)
         self.startBtn.setMaximumSize(QtCore.QSize(100, 25))
@@ -75,19 +80,23 @@ class MainWidget(QtGui.QMainWindow):
         self.horizontalLayout.addWidget(self.startBtn)
         self.verticalLayout_2.addLayout(self.horizontalLayout)
 
+        # Tabs
         self.tabWidget = QtGui.QTabWidget(self.centralWidget)
         self.tabWidget.setEnabled(False)
+        self.tabWidget.setToolTip("<html><body>Pick a file to begin XQLing!</body></html>")
 
         self.queryTab = QtGui.QWidget()
         self.tabWidget.addTab(self.queryTab, "Query")
-
-        self.metaDataTab = QtGui.QWidget()
-        self.tabWidget.addTab(self.metaDataTab, "Metadata")
+        self.advancedTab = QtGui.QWidget()
+        self.tabWidget.addTab(self.advancedTab, "Advanced")  
 
         self.setCentralWidget(self.centralWidget)
 
         self.verticalLayout_2.addWidget(self.tabWidget)
 
+        self.initQueryUI() # Initialize the query area, which is disabled until the user creates the DB.
+
+        # Menu bar
         self.menubar = QtGui.QMenuBar(self.centralWidget)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 1130, 25))
         self.menuAbout = QtGui.QMenu("About", self.menubar)
@@ -134,6 +143,45 @@ class MainWidget(QtGui.QMainWindow):
             """)
 
         self.show()
+
+    def initQueryUI(self):
+        """
+        Initialize the query UI (table & SQL query text input) 
+        Called once the user picks an Excel file and transforms the Excel to a DB.
+        """
+        self.verticalLayout = QtGui.QVBoxLayout(self.queryTab)
+        self.horizontalLayout_6 = QtGui.QHBoxLayout()
+
+        # Buttons above the textbox
+        self.execButton = QtGui.QPushButton("Execute (F5)", self.queryTab)
+        self.execButton.setMaximumSize(QtCore.QSize(100, 25))      
+        self.horizontalLayout_6.addWidget(self.execButton)
+
+        self.stopButton = QtGui.QPushButton("Stop", self.queryTab)
+        self.stopButton.setMaximumSize(QtCore.QSize(100, 25))
+        self.horizontalLayout_6.addWidget(self.stopButton)
+
+        self.pushButton_5 = QtGui.QPushButton("Btn 3", self.queryTab)
+        self.pushButton_5.setMaximumSize(QtCore.QSize(100, 25))
+        self.horizontalLayout_6.addWidget(self.pushButton_5)
+
+        self.pushButton_6 = QtGui.QPushButton("Btn 4", self.queryTab)
+        self.pushButton_6.setMaximumSize(QtCore.QSize(100, 25))
+        self.horizontalLayout_6.addWidget(self.pushButton_6)
+
+        self.verticalLayout.addLayout(self.horizontalLayout_6)
+
+        # Textbox
+        self.queryTextEdit = QtGui.QPlainTextEdit(self.queryTab)
+        self.verticalLayout.addWidget(self.queryTextEdit)
+
+        # Table
+        self.tableWidget = QtGui.QTableWidget(self.queryTab)
+        self.tableWidget.setColumnCount(15)
+        self.tableWidget.setRowCount(555)
+        self.verticalLayout.addWidget(self.tableWidget)
+
+        self.verticalLayout.setStretch(2, 1)
 
 
 
