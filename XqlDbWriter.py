@@ -10,7 +10,7 @@ import datetime
 
 class DBWriter(object):
 	def __init__(self, file_path):
-		self.XqlDB = XqlParser.parse_xls_to_db(file_path)
+		self.XqlDB = XqlParser.parse_xls_to_db(file_path, 3)
 		self.db_conn = sqlite3.connect(":memory:") # Write to memory and not to disk to avoid dbs staying on the users system after program has exited (will happen in case of crashes i.e)
 		self.cursor = self.db_conn.cursor()
 
@@ -22,11 +22,11 @@ class DBWriter(object):
 		for tb in self.XqlDB.tables:
 			print 'starting with '
 			print tb
-			self.write_tb(tb)
+			self.create_tb(tb)
 			print 'done with '
 			print tb
 
-	def write_tb(self, tb):
+	def create_tb(self, tb):
 		"""
 		Create & write an XqlTable object to the SQLite DB
 		"""
@@ -41,17 +41,16 @@ class DBWriter(object):
 
 		self.cursor.execute(creation_query)
 
+		insertion_query = """
+		INSERT INTO {tb_name}
+		({cols})
+		VALUES
+		({vals})
+		""".format(tb_name = tb.name, cols = ', '.join(tb.headers.keys()), vals = ', '.join(['?' for val in range(len(tb.headers))])) # ? is the Python SQLite library place holder for variables.
 
 		# Insert data
-		for row in tb.gen_rows:
-			insertion_query = """
-			INSERT INTO {tb_name}
-			({cols})
-			VALUES
-			({vals})
-			""".format(tb_name = tb.name, cols = ', '.join(row.keys()), vals = ', '.join(['?' for val in row.values()])) # ? is the Python SQLite library place holder for variables.
-
-			self.cursor.execute(insertion_query, row.values())
+		for gen_obj in tb.gen_rows:
+			self.cursor.executemany(insertion_query, map(lambda x: x.values(), gen_obj))
 
 
 		self.db_conn.commit()
@@ -61,4 +60,10 @@ class DBWriter(object):
 		Test function for returning the inserted data
 		"""
 		return self.cursor.execute('select * from {tb_name}'.format(tb_name = tb_name)).fetchall()
+
+# file_path = '/home/user/Desktop/Transactions.xls'
+# file_path = '/home/user/Desktop/ExcelForSid.xls'
+
+
+
 
