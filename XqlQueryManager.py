@@ -3,10 +3,11 @@ import datetime
 import sqlparse
 
 class XqlQuery(object):
-	def __init__(self, cursor, query, results_to_return = 20):
+	def __init__(self, cursor, query, results_to_return = 20, date_format = '%d/%m/%Y %H:%M:%S'):
 		self.cursor = cursor
 		self.query = query
 		self.results_to_return = results_to_return
+		self.date_format = date_format
 		self.parsed_user_query = sqlparse.parse(self.query)
 		self.rows_returned = 0 # How many results have been returned to the user so far
 		self.headers = None
@@ -60,8 +61,8 @@ class XqlQuery(object):
 		Checking whether there are any results left in the cursor, and update class state accordingly.
 		Allows UI to know if user can fetch more rows
 		"""
-		pass
 		#TODO
+		pass
 
 	def get_results(self):
 		"""
@@ -70,24 +71,37 @@ class XqlQuery(object):
 		Every value is casted into a string, because that's how Qt table widgets work!
 		"""
 
-		results = []
-
 		results_from_cursor = self.cursor.fetchmany(self.results_to_return)
 
+		results_for_client = []
+
 		for result in results_from_cursor:
-			new_row = []
+			row_for_client = []
 			for val in result:
-				if isinstance(val, int) or isinstance(val, float):
-					new_row.append(str(val))
-				elif isinstance(val, datetime.datetime):
-					new_row.append('%d/%m/%Y %H:%M:%S')
+				value_for_client = str(val) # First str() cast will convert numbers to strings
+
+				# Try converting to a datetime object to check if it's a date.
+				# SQLite dates are always returned in ISO-date format
+				try:
+					dt = datetime.datetime.strptime(value_for_client, self.date_format)			
+				except ValueError:
+					# This isn't a date, do nothing and stay with the original value
+					pass
 				else:
-					new_row.append(str(val))
-			results.append(new_row)
+					# If the conversion was successful, parse with the user date_format
+					#value_for_client = dt.strftime(self.date_format)
+					value_for_client = dt.strftime('%d')
+					
+				if value_for_client is None:
+					value_for_client = ""
+
+				row_for_client.append(value_for_client)
+			
+			results_for_client.append(row_for_client)
 
 		self.rows_returned += self.results_to_return
 		self.__check_if_more()
-		return results
+		return results_for_client
 
 
 
