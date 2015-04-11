@@ -184,28 +184,29 @@ def get_column_xlrd_type(sheet, col, first_row, last_row):
     """
     finds the columns type by scanning 20% of cells. if it finds more than 1 type, its varchar
     """
-    count = 1
-    cell_value = sheet.cell_type(random.randint(first_row + 1, first_row + 4), col)
 
+    count = 1
+
+    until = until = min(first_row + 5, last_row)
+
+    cell_type = sheet.cell_type(random.randint(first_row + 1, until), col)
+    print "CELL TYPE: {CELL}".format(CELL = cell_type)
     for i in xrange(first_row + 5, last_row + 1, 5):
         count += 1
-
-        if i + 5 >= last_row:
-            until = last_row
-        else:
-            until = i + 5
-        temp_value = sheet.cell_type(random.randint(i, until), col)
-
+        until = min(i + 4, last_row)
+        temp_type = sheet.cell_type(random.randint(i, until), col)
+        print "CELL TYPE: {CELL}".format(CELL = temp_type)
         #if 2 types are found, return 1 (VARCHAR)
-        #print cell_value, temp_value
-        if cell_value != 0 and temp_value != cell_value:
-            return cell_value
+        #print cell_type, temp_type
+        if cell_type != 0 and temp_type != 0 and temp_type != cell_type:
+            print "RETURNED {CELL} after {COUNT} loops".format(CELL = cell_type, COUNT = count)
+            return cell_type
 
-        elif temp_value != 0:
-            cell_value = temp_value
+        elif temp_type != 0:
+            cell_type = temp_type
     else:
         #No 2 cells have different values
-        return cell_value
+        return cell_type
 
 def convert_cell_type(value, src_type, target_type, datemode):
     """
