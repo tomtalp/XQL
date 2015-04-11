@@ -5,13 +5,15 @@
 
 import sqlite3
 import XqlParser
-import tempfile
 import datetime
 
 class DBWriter(object):
-	def __init__(self, file_path):
-		self.XqlDB = XqlParser.parse_xls_to_db(file_path, 3)
-		self.db_conn = sqlite3.connect(":memory:") # Write to memory and not to disk to avoid dbs staying on the users system after program has exited (will happen in case of crashes i.e)
+	def __init__(self, file_path, bulk_amount = 5):
+		self.bulk_amount = bulk_amount
+		self.XqlDB = XqlParser.parse_xls_to_db(file_path, self.bulk_amount)
+		
+		# Write to memory and not to disk to avoid dbs staying on the users system after program has exited (will happen in case of crashes i.e)
+		self.db_conn = sqlite3.connect(":memory:")
 		self.cursor = self.db_conn.cursor()
 
 	def write_to_db(self):
@@ -55,14 +57,10 @@ class DBWriter(object):
 
 		self.db_conn.commit()
 
-	def check_data(self, tb_name):
-		"""
-		Test function for returning the inserted data
-		"""
-		return self.cursor.execute('select * from {tb_name}'.format(tb_name = tb_name)).fetchall()
-
 # file_path = '/home/user/Desktop/Transactions.xls'
-# file_path = '/home/user/Desktop/ExcelForSid.xls'
+# file_path = '/home/user/Desktop/TestExcel.xls'
+#file_path = '/home/user/Desktop/test.xlsx'
+file_path = '/home/user/Desktop/busfin.xls'
 
 
 
