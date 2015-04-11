@@ -1,7 +1,7 @@
 from PyQt4 import QtGui, QtCore
 from XqlDbWriter import DBWriter
 import sys
-import os
+import os, datetime, XqlQueryManager
 
 
 class MainWidget(QtGui.QMainWindow):
@@ -35,8 +35,8 @@ class MainWidget(QtGui.QMainWindow):
         """
         Begin writing the DB behind the scenes, clear the screen and when done transform the screen to the query interface.
         """
-        writer = DBWriter(self.file_path)
-        writer.write_to_db()
+        self.writer = DBWriter(self.file_path)
+        self.writer.write_to_db()
 
         self.startBtn.setEnabled(False) # Once DB has been initialized, user shouldn't be able to click this button to init again.
         self.tabWidget.setEnabled(True) # The tabs can now be used
@@ -95,6 +95,7 @@ class MainWidget(QtGui.QMainWindow):
         self.verticalLayout_2.addWidget(self.tabWidget)
 
         self.initQueryUI() # Initialize the query area, which is disabled until the user creates the DB.
+        self.initAdvancedUI()
 
         # Menu bar
         self.menubar = QtGui.QMenuBar(self.centralWidget)
@@ -154,18 +155,19 @@ class MainWidget(QtGui.QMainWindow):
 
         # Buttons above the textbox
         self.execButton = QtGui.QPushButton("Execute (F5)", self.queryTab)
-        self.execButton.setMaximumSize(QtCore.QSize(100, 25))      
+        self.execButton.setMaximumSize(QtCore.QSize(100, 25))
+        self.execButton.clicked.connect(self.sendQuery)
         self.horizontalLayout_6.addWidget(self.execButton)
 
         self.stopButton = QtGui.QPushButton("Stop", self.queryTab)
         self.stopButton.setMaximumSize(QtCore.QSize(100, 25))
         self.horizontalLayout_6.addWidget(self.stopButton)
 
-        self.pushButton_5 = QtGui.QPushButton("Btn 3", self.queryTab)
+        self.pushButton_5 = QtGui.QPushButton("Show Next", self.queryTab)
         self.pushButton_5.setMaximumSize(QtCore.QSize(100, 25))
         self.horizontalLayout_6.addWidget(self.pushButton_5)
 
-        self.pushButton_6 = QtGui.QPushButton("Btn 4", self.queryTab)
+        self.pushButton_6 = QtGui.QPushButton("Show All", self.queryTab)
         self.pushButton_6.setMaximumSize(QtCore.QSize(100, 25))
         self.horizontalLayout_6.addWidget(self.pushButton_6)
 
@@ -183,6 +185,40 @@ class MainWidget(QtGui.QMainWindow):
 
         self.verticalLayout.setStretch(2, 1)
 
+    def initAdvancedUI(self):
+        """
+
+        initialize the Advanced tab UI
+
+        """
+
+        #TODO
+        self.verticalLayout_3 = QtGui.QVBoxLayout(self.advancedTab)
+
+        self.horizontalLayout_3 = QtGui.QHBoxLayout()
+        pass
+
+    def sendQuery(self):
+        """
+        Sends the query and populates the TableWidget with the results
+        """
+
+        query = str(self.queryTextEdit.toPlainText())
+
+        self.query_manager = XqlQueryManager.XqlQuery(self.writer.cursor, query)
+
+        headers = self.query_manager.headers
+
+        data = self.query_manager.get_results()
+
+        self.tableWidget.setColumnCount(len(headers))
+        self.tableWidget.setRowCount(len(data))
+
+        self.tableWidget.setHorizontalHeaderLabels(headers)
+
+        for row_num, row_value in enumerate(data):
+            for col_num, item in enumerate(data[row_num]):
+                self.tableWidget.setItem(row_num, col_num, QtGui.QTableWidgetItem(str(item)))
 
 
 def get_os_env():
