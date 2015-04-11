@@ -72,7 +72,7 @@ class XqlQuery(object):
 
 		results = []
 
-		results_from_cursor = cursor.fetchmany(self.results_to_return)
+		results_from_cursor = self.cursor.fetchmany(self.results_to_return)
 
 		for result in results_from_cursor:
 			new_row = []
@@ -85,7 +85,7 @@ class XqlQuery(object):
 					new_row.append(str(val))
 			results.append(new_row)
 
-		self.rows_returnd += self.results_to_return
+		self.rows_returned += self.results_to_return
 		self.__check_if_more()
 		return results
 
