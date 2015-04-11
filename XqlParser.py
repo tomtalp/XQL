@@ -11,6 +11,7 @@ from distutils.command.build_scripts import first_line_re
 import xlrd, re, os, random, datetime
 from sqlparse import keywords
 
+SQLITE3_KEYWORDS = ['ABORT', 'ACTION', 'ADD', 'AFTER', 'ALL', 'ALTER', 'ANALYZE', 'AND', 'AS', 'ASC', 'ATTACH', 'AUTOINCREMENT', 'BEFORE', 'BEGIN', 'BETWEEN', 'BY', 'CASCADE', 'CASE', 'CAST', 'CHECK', 'COLLATE', 'COLUMN', 'COMMIT', 'CONFLICT', 'CONSTRAINT', 'CREATE', 'CROSS', 'CURRENT_DATE', 'CURRENT_TIME', 'CURRENT_TIMESTAMP', 'DATABASE', 'DEFAULT', 'DEFERRABLE', 'DEFERRED', 'DELETE', 'DESC', 'DETACH', 'DISTINCT', 'DROP', 'EACH', 'ELSE', 'END', 'ESCAPE', 'EXCEPT', 'EXCLUSIVE', 'EXISTS', 'EXPLAIN', 'FAIL', 'FOR', 'FOREIGN', 'FROM', 'FULL', 'GLOB', 'GROUP', 'HAVING', 'IF', 'IGNORE', 'IMMEDIATE', 'IN', 'INDEX', 'INDEXED', 'INITIALLY', 'INNER', 'INSERT', 'INSTEAD', 'INTERSECT', 'INTO', 'IS', 'ISNULL', 'JOIN', 'KEY', 'LEFT', 'LIKE', 'LIMIT', 'MATCH', 'NATURAL', 'NO', 'NOT', 'NOTNULL', 'NULL', 'OF', 'OFFSET', 'ON', 'OR', 'ORDER', 'OUTER', 'PLAN', 'PRAGMA', 'PRIMARY', 'QUERY', 'RAISE', 'REFERENCES', 'REGEXP', 'REINDEX', 'RELEASE', 'RENAME', 'REPLACE', 'RESTRICT', 'RIGHT', 'ROLLBACK', 'ROW', 'SAVEPOINT', 'SELECT', 'SET', 'TABLE', 'TEMP', 'TEMPORARY', 'THEN', 'TO', 'TRANSACTION', 'TRIGGER', 'UNION', 'UNIQUE', 'UPDATE', 'USING', 'VACUUM', 'VALUES', 'VIEW', 'VIRTUAL', 'WHEN', 'WHERE']
 
 ####### Classes #######
 class XqlDB(object):
@@ -58,9 +59,16 @@ class XqlTable(object):
 
 ####### Parsing #######
 
-def filter_name(header_name):
-    filtered_name = re.sub('\W', '_', header_name).upper()
-    if filtered_name in keywords.KEYWORDS_COMMON or filtered_name in keywords.KEYWORDS:
+def filter_name(name):
+    """ 
+    Validate the name to match SQL names
+    Turns any non-word (letters/numbers/underscore) into an underscore
+    """
+    
+    filtered_name = re.sub('\W', '_', name).upper()
+
+    #if the name is a sqlite3 keyword, add 'Xql_' prefix
+    if filtered_name in SQLITE3_KEYWORDS:
         filtered_name = 'Xql_{name}'.format(name = filtered_name)
     return filtered_name
 
@@ -203,7 +211,6 @@ def get_column_xlrd_type(sheet, col, first_row, last_row):
         temp_type = sheet.cell_type(random.randint(i, until), col)
 
         #if 2 types are found, return 1 (VARCHAR)
-        print cell_type, temp_type
         if cell_type != 0 and temp_type != 0 and temp_type != cell_type:
             return 1
 
