@@ -192,16 +192,20 @@ def get_column_xlrd_type(sheet, col, first_row, last_row):
     until = until = min(first_row + 5, last_row)
 
     cell_type = sheet.cell_type(random.randint(first_row + 1, until), col)
-    #print "CELL TYPE: {CELL}".format(CELL = cell_type)
+
+    #If it's a VARCHAR, return it immediately as VARCHAR is the most generic
+    if cell_type == 1:
+        return cell_type
+
     for i in xrange(first_row + 5, last_row + 1, 5):
         count += 1
         until = min(i + 4, last_row)
         temp_type = sheet.cell_type(random.randint(i, until), col)
+
         #if 2 types are found, return 1 (VARCHAR)
-        #print cell_type, temp_type
+        print cell_type, temp_type
         if cell_type != 0 and temp_type != 0 and temp_type != cell_type:
-            #print "RETURNED {CELL} after {COUNT} loops".format(CELL = cell_type, COUNT = count)
-            return cell_type
+            return 1
 
         elif temp_type != 0:
             cell_type = temp_type
@@ -218,6 +222,8 @@ def convert_cell_type(value, src_type, target_type, datemode):
     Dates that must be converted to string are converted into the following format: %d-%m-%Y %H:%M
 
     """
+
+
     if target_type == 'VARCHAR':
         if src_type == 'DATETIME':
             year, month, date, hour, minute, second = xlrd.xldate_as_tuple(value, datemode)
@@ -235,7 +241,7 @@ def convert_cell_type(value, src_type, target_type, datemode):
     elif target_type == 'BOOLEAN':
         value = bool(value)
     elif target_type == 'DATETIME':
-        value = None
+        value = None #Non datetime values cannot be cast into datetime
     return value
 
 
