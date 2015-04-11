@@ -1,6 +1,6 @@
 from PyQt4 import QtGui, QtCore
 from XqlDbWriter import DBWriter
-import sys
+import sys, time
 import os, datetime, XqlQueryManager
 
 
@@ -68,6 +68,9 @@ class MainWidget(QtGui.QMainWindow):
 
         self.filePathLabel = QtGui.QLabel("", self) # Show nothing until initialized with a file.
         self.horizontalLayout_2.addWidget(self.filePathLabel)
+
+        self.file_written_lbl = QtGui.QLabel("", self)
+        self.horizontalLayout_2.addWidget(self.file_written_lbl)
 
         self.horizontalLayout.addLayout(self.horizontalLayout_2)
 
@@ -163,9 +166,10 @@ class MainWidget(QtGui.QMainWindow):
         self.stopButton.setMaximumSize(QtCore.QSize(100, 25))
         self.horizontalLayout_6.addWidget(self.stopButton)
 
-        self.pushButton_5 = QtGui.QPushButton("Show Next", self.queryTab)
-        self.pushButton_5.setMaximumSize(QtCore.QSize(100, 25))
-        self.horizontalLayout_6.addWidget(self.pushButton_5)
+        self.btn_show_more = QtGui.QPushButton("Show Next", self.queryTab)
+        self.btn_show_more.setMaximumSize(QtCore.QSize(100, 25))
+        self.btn_show_more.clicked.connect(self.get_more_results)
+        self.horizontalLayout_6.addWidget(self.btn_show_more)
 
         self.pushButton_6 = QtGui.QPushButton("Show All", self.queryTab)
         self.pushButton_6.setMaximumSize(QtCore.QSize(100, 25))
@@ -180,23 +184,72 @@ class MainWidget(QtGui.QMainWindow):
         # Table
         self.tableWidget = QtGui.QTableWidget(self.queryTab)
         self.tableWidget.setColumnCount(15)
-        self.tableWidget.setRowCount(555)
+        self.tableWidget.setRowCount(30)
         self.verticalLayout.addWidget(self.tableWidget)
 
         self.verticalLayout.setStretch(2, 1)
 
     def initAdvancedUI(self):
         """
-
         initialize the Advanced tab UI
-
         """
 
         #TODO
-        self.verticalLayout_3 = QtGui.QVBoxLayout(self.advancedTab)
+        """self.v_advanced_layout = QtGui.QVBoxLayout(self.advancedTab)
+        self.v_advanced_layout.setSpacing(10)
 
-        self.horizontalLayout_3 = QtGui.QHBoxLayout()
+        self.h_date_format_layout = QtGui.QHBoxLayout()
+        self.h_date_format_layout.setSpacing(10)
+
+        self.date_format_label = QtGui.QLabel()
+        self.date_format_label.setText("<html><b>Date Format:</b></html>")
+        self.date_format_label.setMaximumSize(QtCore.QSize(100, 100))
+        self.date_format_label.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
+        self.h_date_format_layout.addWidget(self.date_format_label)
+
+        self.date_format_lstbox = QtGui.QComboBox()
+        self.date_format_lstbox.addItems(["20/03/2015", "03/20/2015"])
+        self.date_format_lstbox.setMaximumSize(QtCore.QSize(100, 20))
+        self.date_format_lstbox.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
+        self.h_date_format_layout.addWidget(self.date_format_lstbox)
+
+
+        self.label2 = QtGui.QLabel()
+        self.label2.setText("<html><b>Rows to return:</b></html>")
+
+        self.v_advanced_layout.addLayout(self.h_date_format_layout)"""
+
+        options_grid = QtGui.QGridLayout()
+
+        date_format_label = QtGui.QLabel("Date Format: ")
+
+        rows_to_return_label = QtGui.QLabel("Rows to return: ")
+
+        date_format_lstbox = QtGui.QComboBox()
+
+        date_format_lstbox.addItems(["20/03/2015", "03/20/2015"])
+        date_format_lstbox.setMaximumSize(QtCore.QSize(150, 30))
+
+        rows_to_return_text = QtGui.QTextEdit()
+        rows_to_return_text.setMaximumSize(QtCore.QSize(150, 30))
+
+        options_grid.addWidget(date_format_label, 1, 0)
+        options_grid.addWidget(date_format_lstbox, 1, 1)
+
+        options_grid.addWidget(rows_to_return_label, 2, 0)
+        options_grid.addWidget(rows_to_return_text, 2, 1)
+
+        self.advancedTab.setLayout(options_grid)
+
+
+
+
+
         pass
+
+    def keyPressEvent(self, event):
+        if event.key() == QtCore.Qt.Key_F5:
+            self.sendQuery()
 
     def sendQuery(self):
         """
@@ -208,18 +261,42 @@ class MainWidget(QtGui.QMainWindow):
         self.query_manager = XqlQueryManager.XqlQuery(self.writer.cursor, query)
 
         headers = self.query_manager.headers
-
         data = self.query_manager.get_results()
 
-        self.tableWidget.setColumnCount(len(headers))
-        self.tableWidget.setRowCount(len(data))
+        self.add_items_to_table(self.tableWidget, data, True, self.query_manager.headers)
 
-        self.tableWidget.setHorizontalHeaderLabels(headers)
+    def add_items_to_table(self, tableWidget, data, first, headers = ''):
+        """
+        Adds data to the TableWidget
+        """
 
-        for row_num, row_value in enumerate(data):
-            for col_num, item in enumerate(data[row_num]):
-                self.tableWidget.setItem(row_num, col_num, QtGui.QTableWidgetItem(str(item)))
+        #If this is the first time data is added, clear the table of previous data and add header names
+        if first:
+            current_rows = 0
+            tableWidget.clear()
+            tableWidget.setColumnCount(len(headers))
+            tableWidget.setHorizontalHeaderLabels(headers)
+        else:
+            current_rows = tableWidget.rowCount()
 
+        #Update amount of rows
+        tableWidget.setRowCount(current_rows + len(data))
+
+        #Write the data
+        for index, row_value in enumerate(data):
+            for col_num, item in enumerate(row_value):
+                tableWidget.setItem(index + current_rows, col_num, QtGui.QTableWidgetItem(item))
+
+    def get_more_results(self):
+
+        #data = self.query_manager.get_results()
+        data = [('Sid', '45', 'Hello', '24/01/1995'), ('Kra', '1', '43.2')]
+        self.add_items_to_table(self.tableWidget, data, False)
+
+
+
+        #TODO
+        pass
 
 def get_os_env():
     """
