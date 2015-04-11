@@ -19,6 +19,11 @@ class MainWidget(QtGui.QMainWindow):
         """
         Handler for the 'open file' button. User picks a file and
         """
+
+        # Make sure when user begins searching for a file that start button is disabled & path label is empty .
+        # Fixes a bug that when user picks a file and clicks "Change File", he can pick an invalid file and press "Go!", since the button was enabled by the previous upload.
+        self.startBtn.setEnabled(False)
+        self.filePathLabel.setText("")
         self.file_path = QtGui.QFileDialog.getOpenFileName(self, 'Pick an Excel file', os.getenv(get_os_env()),
                                                      "Excel Files (*.xls *.xlsx)")
 
