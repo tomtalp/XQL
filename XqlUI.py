@@ -258,12 +258,13 @@ class MainWidget(QtGui.QMainWindow):
 
         query = str(self.queryTextEdit.toPlainText())
 
-        self.query_manager = XqlQueryManager.XqlQuery(self.writer.cursor, query)
+        if query.strip():
+            self.query_manager = XqlQueryManager.XqlQuery(self.writer.cursor, query)
 
-        headers = self.query_manager.headers
-        data = self.query_manager.get_results()
+            headers = self.query_manager.headers
+            data = self.query_manager.get_results()
 
-        self.add_items_to_table(self.tableWidget, data, True, self.query_manager.headers)
+            self.add_items_to_table(self.tableWidget, data, True, self.query_manager.headers)
 
     def add_items_to_table(self, tableWidget, data, first, headers = ''):
         """
