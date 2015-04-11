@@ -9,6 +9,7 @@
 from distutils.command.build_scripts import first_line_re
 
 import xlrd, re, os, random, datetime
+from sqlparse import keywords
 
 
 ####### Classes #######
@@ -58,7 +59,10 @@ class XqlTable(object):
 ####### Parsing #######
 
 def filter_name(header_name):
-    return re.sub('\W', '_', header_name).upper()
+    filtered_name = re.sub('\W', '_', header_name).upper()
+    if filtered_name in keywords.KEYWORDS_COMMON or filtered_name in keywords.KEYWORDS:
+        filtered_name = 'Xql_{name}'.format(name = filtered_name)
+    return filtered_name
 
 def parse_xls_to_db(xls_path, rows_per_iter):
     file_name = os.path.splitext(os.path.basename(xls_path))[0]
@@ -82,7 +86,6 @@ def parse_sheet_to_table(workbook, sheet, rows_per_iter):
 
     #minimum 1 rows (only header)
     if last_col >= 0:
-
         table = XqlTable(filter_name(sheet.name))
 
         #If we want to find where the table actually starts (might not start at 0, 0),
@@ -143,16 +146,15 @@ def generate_sheet_rows(workbook, sheet, first_row, last_row, first_col, last_co
     while row <= last_row:
         rows_block = []
         origin_row = row
-
         #yields a list wirh rows_per_iter rows
         while row < origin_row + rows_per_iter and row <= last_row:
             row_values = {}
             for col in xrange(first_col, last_col + 1):
-                header_name = table_headers[col][0]
+                header_name = table_headers[col - first_col][0]
                 value = sheet.cell_value(row, col)
 
                 src_type = xlrd_type_to_sqlite_type(sheet.cell_type(row, col))
-                target_type = table_headers[col][1]
+                target_type = table_headers[col - first_col][1]
 
                 if src_type == target_type == 'DATETIME':
                     year, month, date, hour, minute, second = xlrd.xldate_as_tuple(value, workbook.datemode)
@@ -195,7 +197,6 @@ def get_column_xlrd_type(sheet, col, first_row, last_row):
         count += 1
         until = min(i + 4, last_row)
         temp_type = sheet.cell_type(random.randint(i, until), col)
-        print "CELL TYPE: {CELL}".format(CELL = temp_type)
         #if 2 types are found, return 1 (VARCHAR)
         #print cell_type, temp_type
         if cell_type != 0 and temp_type != 0 and temp_type != cell_type:
