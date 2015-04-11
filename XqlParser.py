@@ -190,7 +190,7 @@ def get_column_xlrd_type(sheet, col, first_row, last_row):
     until = until = min(first_row + 5, last_row)
 
     cell_type = sheet.cell_type(random.randint(first_row + 1, until), col)
-    print "CELL TYPE: {CELL}".format(CELL = cell_type)
+    #print "CELL TYPE: {CELL}".format(CELL = cell_type)
     for i in xrange(first_row + 5, last_row + 1, 5):
         count += 1
         until = min(i + 4, last_row)
@@ -199,7 +199,7 @@ def get_column_xlrd_type(sheet, col, first_row, last_row):
         #if 2 types are found, return 1 (VARCHAR)
         #print cell_type, temp_type
         if cell_type != 0 and temp_type != 0 and temp_type != cell_type:
-            print "RETURNED {CELL} after {COUNT} loops".format(CELL = cell_type, COUNT = count)
+            #print "RETURNED {CELL} after {COUNT} loops".format(CELL = cell_type, COUNT = count)
             return cell_type
 
         elif temp_type != 0:
