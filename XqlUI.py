@@ -269,7 +269,7 @@ class MainWidget(QtGui.QMainWindow):
                 results_to_return = 20
             else:
                 results_to_return = abs(int(results_to_return_text))
-                
+
             self.query_manager = XqlQueryManager.XqlQuery(self.writer.cursor, query, results_to_return, python_date_format)
 
             headers = self.query_manager.headers
