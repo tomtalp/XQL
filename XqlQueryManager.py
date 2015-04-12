@@ -61,7 +61,8 @@ class XqlQuery(object):
 		#TODO
 		pass
 
-	def get_results(self):
+	def get_results(self, return_all = False):
+        #TODO Consider the retuan_all == True possibility
 		"""
 		Return results to the client.
 
