@@ -66,11 +66,12 @@ def filter_name(name):
     """
     
     filtered_name = re.sub('\W', '_', name).upper()
+    filtered_name_stripped = filtered_name.strip('_')
 
     #if the name is a sqlite3 keyword, add 'Xql_' prefix
-    if filtered_name in SQLITE3_KEYWORDS:
-        filtered_name = 'Xql_{name}'.format(name = filtered_name)
-    return filtered_name
+    if filtered_name_stripped in SQLITE3_KEYWORDS:
+        filtered_name_stripped = 'Xql_{name}'.format(name = filtered_name)
+    return filtered_name_stripped
 
 def parse_xls_to_db(xls_path, rows_per_iter):
     file_name = os.path.splitext(os.path.basename(xls_path))[0]
