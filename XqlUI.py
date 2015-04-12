@@ -178,6 +178,7 @@ class MainWidget(QtGui.QMainWindow):
 
         self.showAllBtn = QtGui.QPushButton("Show All", self.queryTab)
         self.showAllBtn.setMaximumSize(QtCore.QSize(100, 25))
+        self.showAllBtn.clicked.connect(self.get_all_results)
         self.horizontalLayout_6.addWidget(self.showAllBtn)
         self.showAllBtn.setEnabled(False)
 
@@ -217,8 +218,9 @@ class MainWidget(QtGui.QMainWindow):
         self.results_to_return_label = QtGui.QLabel("Rows to return: ") #Label
         self.results_to_return_text = QtGui.QLineEdit('20')
         self.results_to_return_text.setMaximumSize(QtCore.QSize(150, 30))
-        self.int_validator = QtGui.QIntValidator() #Validation - must be int
-        self.results_to_return_text.setValidator(self.int_validator)
+        positive_int_regex = QtCore.QRegExp("^\d+$")
+        self.positive_int_validator = QtGui.QRegExpValidator(positive_int_regex) #Validation - must be positive int
+        self.results_to_return_text.setValidator(self.positive_int_validator)
         self.results_to_return_text.textChanged.connect(self.check_state)
         self.results_to_return_text.textChanged.emit(self.results_to_return_text.text())
 
@@ -260,6 +262,7 @@ class MainWidget(QtGui.QMainWindow):
     def sendQuery(self):
         """
         Sends the query and populates the TableWidget with the results
+        if partial_results is True, it returns results_to_return results, otherwise it returns everything
         """
 
         #Get query from user
@@ -273,7 +276,8 @@ class MainWidget(QtGui.QMainWindow):
             if not results_to_return_text: #If empty, choose default
                 results_to_return = 20
             else:
-                results_to_return = abs(int(results_to_return_text))
+                results_to_return = int(results_to_return_text)
+
 
             self.query_manager = XqlQueryManager.XqlQuery(self.writer.cursor, query, results_to_return, python_date_format)
 
@@ -282,7 +286,7 @@ class MainWidget(QtGui.QMainWindow):
 
             self.add_items_to_table(self.tableWidget, data, True, self.query_manager.headers)
 
-    def add_items_to_table(self, tableWidget, data, first, headers = ''):
+    def add_items_to_table(self, tableWidget, data, first = False, headers = ''):
         """
         Adds data to the TableWidget
         """
@@ -310,9 +314,19 @@ class MainWidget(QtGui.QMainWindow):
         """
         Check if there are any results left, and fetch them.
         """
+
         data = self.query_manager.get_results()
-        self.add_items_to_table(self.tableWidget, data, False)
+        self.add_items_to_table(self.tableWidget, data)
         self.check_awaiting_results() # Check if we have more results to bring, and alter the "show more button"
+
+    def get_all_results(self):
+        """
+        Fetches all results
+        """
+
+        data = self.query_manager.get_results(True)
+        self.add_items_to_table(self.tableWidget, data)
+        self.check_awaiting_results()
 
     def check_awaiting_results(self):
         """
