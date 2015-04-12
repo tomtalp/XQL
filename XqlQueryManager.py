@@ -9,13 +9,10 @@ class XqlQuery(object):
 		self.results_to_return = results_to_return
 		self.date_format = date_format
 		self.parsed_user_query = sqlparse.parse(self.query)
-		self.rows_returned = 0 # How many results have been returned to the user so far
 		self.headers = None
 
-		####### TODO #######
 		self.has_more = False 
-		self.max_results = 0 # How many results can this query possibly produce
-		####################
+		self.__awaiting_results = None
 
 		self.__exec()
 
@@ -66,8 +63,32 @@ class XqlQuery(object):
 
 	def get_results(self):
 		"""
-		Returns a list of tuples, each tuple representing a TB row.
+		Return results to the client.
 
+		Once results are fetched from the cursor, try bringing the next set of results to check if there's data left.
+		"""
+		# The first time we fetch data, __awaiting_results is empty so we have to get new data
+		if not self.__awaiting_results:
+			results_for_client = self.fetch_data()
+		# If we already have awaiting_results, use them	
+		else:
+			results_for_client = self.__awaiting_results
+
+		self.__awaiting_results = self.fetch_data()		
+
+		# Check if there are any results left for the next query
+		if self.__awaiting_results:
+			self.has_more = True
+		else:
+			self.has_more = False
+
+		return results_for_client
+
+	def fetch_data(self):
+		"""
+		Fetch & parse data from the cursor. 
+
+		Returns a list of tuples, each tuple representing a TB row.
 		Every value is casted into a string, because that's how Qt table widgets work!
 		"""
 
@@ -99,9 +120,8 @@ class XqlQuery(object):
 			
 			results_for_client.append(row_for_client)
 
-		self.rows_returned += self.results_to_return
-		self.__check_if_more()
 		return results_for_client
+
 
 
 

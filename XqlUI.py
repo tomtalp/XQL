@@ -301,8 +301,8 @@ class MainWidget(QtGui.QMainWindow):
 
     def get_more_results(self):
 
-        #data = self.query_manager.get_results()
-        data = [('Sid', '45', 'Hello', '24/01/1995'), ('Kra', '1', '43.2')]
+        data = self.query_manager.get_results()
+        #data = [('Sid', '45', 'Hello', '24/01/1995'), ('Kra', '1', '43.2')]
         self.add_items_to_table(self.tableWidget, data, False)
 
         #TODO
