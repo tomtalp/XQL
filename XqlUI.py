@@ -170,14 +170,16 @@ class MainWidget(QtGui.QMainWindow):
         self.stopButton.setMaximumSize(QtCore.QSize(100, 25))
         self.horizontalLayout_6.addWidget(self.stopButton)
 
-        self.btn_show_more = QtGui.QPushButton("Show Next", self.queryTab)
-        self.btn_show_more.setMaximumSize(QtCore.QSize(100, 25))
-        self.btn_show_more.clicked.connect(self.get_more_results)
-        self.horizontalLayout_6.addWidget(self.btn_show_more)
+        self.showMoreBtn = QtGui.QPushButton("Show Next", self.queryTab)
+        self.showMoreBtn.setMaximumSize(QtCore.QSize(100, 25))
+        self.showMoreBtn.clicked.connect(self.get_more_results)
+        self.horizontalLayout_6.addWidget(self.showMoreBtn)
+        self.showMoreBtn.setEnabled(False)
 
-        self.pushButton_6 = QtGui.QPushButton("Show All", self.queryTab)
-        self.pushButton_6.setMaximumSize(QtCore.QSize(100, 25))
-        self.horizontalLayout_6.addWidget(self.pushButton_6)
+        self.showAllBtn = QtGui.QPushButton("Show All", self.queryTab)
+        self.showAllBtn.setMaximumSize(QtCore.QSize(100, 25))
+        self.horizontalLayout_6.addWidget(self.showAllBtn)
+        self.showAllBtn.setEnabled(False)
 
         self.verticalLayout.addLayout(self.horizontalLayout_6)
 
@@ -249,6 +251,9 @@ class MainWidget(QtGui.QMainWindow):
 
 
     def keyPressEvent(self, event):
+        """
+        Key event for executing a query
+        """
         if event.key() == QtCore.Qt.Key_F5:
             self.sendQuery()
 
@@ -299,14 +304,27 @@ class MainWidget(QtGui.QMainWindow):
             for col_num, item in enumerate(row_value):
                 tableWidget.setItem(index + current_rows, col_num, QtGui.QTableWidgetItem(item))
 
+        self.check_awaiting_results() # Enable "show more" if we have more results to bring
+
     def get_more_results(self):
-
+        """
+        Check if there are any results left, and fetch them.
+        """
         data = self.query_manager.get_results()
-        #data = [('Sid', '45', 'Hello', '24/01/1995'), ('Kra', '1', '43.2')]
         self.add_items_to_table(self.tableWidget, data, False)
+        self.check_awaiting_results() # Check if we have more results to bring, and alter the "show more button"
 
-        #TODO
-        pass
+    def check_awaiting_results(self):
+        """
+        Modify the "show all/more" buttons state - set enabled if query manager has more results, disable if not.
+        """
+        if self.query_manager.has_awaiting_results:
+            self.showMoreBtn.setEnabled(True)
+            self.showAllBtn.setEnabled(True)
+        else:
+            self.showMoreBtn.setEnabled(False)
+            self.showAllBtn.setEnabled(False)
+
 
     class WorkerThread(QtCore.QThread):
         def __init__(self, mainWindow):

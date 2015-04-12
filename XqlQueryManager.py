@@ -11,7 +11,7 @@ class XqlQuery(object):
 		self.parsed_user_query = sqlparse.parse(self.query)
 		self.headers = None
 
-		self.has_more = False 
+		self.has_awaiting_results = False 
 		self.__awaiting_results = None
 
 		self.__exec()
@@ -78,9 +78,9 @@ class XqlQuery(object):
 
 		# Check if there are any results left for the next query
 		if self.__awaiting_results:
-			self.has_more = True
+			self.has_awaiting_results = True
 		else:
-			self.has_more = False
+			self.has_awaiting_results = False
 
 		return results_for_client
 
