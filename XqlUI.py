@@ -31,6 +31,11 @@ class MainWidget(QtGui.QMainWindow):
             self.startBtn.setEnabled(True)  # Activate the button that begins the process
             self.tabWidget.setToolTip("Press the 'Go!' button to begin working")
 
+    def beginProcessThread(self):
+        worker_thread = self.WorkerThread(self)
+        worker_thread.start()
+
+
     def beginProcess(self):
         """
         Begin writing the DB behind the scenes, clear the screen and when done transform the screen to the query interface.
@@ -41,7 +46,6 @@ class MainWidget(QtGui.QMainWindow):
         self.startBtn.setEnabled(False) # Once DB has been initialized, user shouldn't be able to click this button to init again.
         self.tabWidget.setEnabled(True) # The tabs can now be used
         self.tabWidget.setToolTip("") # Cancel the tooltip that instructs user to pick a file.
-
 
 
     def initUI(self):
@@ -194,58 +198,55 @@ class MainWidget(QtGui.QMainWindow):
         initialize the Advanced tab UI
         """
 
-        #TODO
-        """self.v_advanced_layout = QtGui.QVBoxLayout(self.advancedTab)
-        self.v_advanced_layout.setSpacing(10)
+        self.options_grid = QtGui.QGridLayout()
 
-        self.h_date_format_layout = QtGui.QHBoxLayout()
-        self.h_date_format_layout.setSpacing(10)
 
-        self.date_format_label = QtGui.QLabel()
-        self.date_format_label.setText("<html><b>Date Format:</b></html>")
-        self.date_format_label.setMaximumSize(QtCore.QSize(100, 100))
-        self.date_format_label.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
-        self.h_date_format_layout.addWidget(self.date_format_label)
+        self.date_formats = {"DD/MM/YYYY H:M:S": "%d/%m/%Y %H:%M:%S",
+                             "MM/DD/YYYY H:M:S": "%m/%d/%Y %H:%M:%S"}
 
+        #Date Format input
+        self.date_format_label = QtGui.QLabel("Date Format: ") #Label
         self.date_format_lstbox = QtGui.QComboBox()
-        self.date_format_lstbox.addItems(["20/03/2015", "03/20/2015"])
-        self.date_format_lstbox.setMaximumSize(QtCore.QSize(100, 20))
-        self.date_format_lstbox.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
-        self.h_date_format_layout.addWidget(self.date_format_lstbox)
+        self.date_format_lstbox.addItems(self.date_formats.keys())
+        self.date_format_lstbox.setCurrentIndex(self.date_formats.keys().index("DD/MM/YYYY H:M:S")) #Default
+        self.date_format_lstbox.setMaximumSize(QtCore.QSize(150, 30))
 
+        #Rows to return input
+        self.results_to_return_label = QtGui.QLabel("Rows to return: ") #Label
+        self.results_to_return_text = QtGui.QLineEdit('20')
+        self.results_to_return_text.setMaximumSize(QtCore.QSize(150, 30))
+        self.int_validator = QtGui.QIntValidator() #Validation - must be int
+        self.results_to_return_text.setValidator(self.int_validator)
+        self.results_to_return_text.textChanged.connect(self.check_state)
+        self.results_to_return_text.textChanged.emit(self.results_to_return_text.text())
 
-        self.label2 = QtGui.QLabel()
-        self.label2.setText("<html><b>Rows to return:</b></html>")
+        self.options_grid.addWidget(self.date_format_label, 1, 0)
+        self.options_grid.addWidget(self.date_format_lstbox, 1, 1)
 
-        self.v_advanced_layout.addLayout(self.h_date_format_layout)"""
+        self.options_grid.addWidget(self.results_to_return_label, 2, 0)
+        self.options_grid.addWidget(self.results_to_return_text, 2, 1)
 
-        options_grid = QtGui.QGridLayout()
+        self.advancedTab.setLayout(self.options_grid)
 
-        date_format_label = QtGui.QLabel("Date Format: ")
+    def check_state(self, *args, **kwargs):
 
-        rows_to_return_label = QtGui.QLabel("Rows to return: ")
+        """
+        Checks the state of results_to_return_text and changes its color accordingly
+        """
 
-        date_format_lstbox = QtGui.QComboBox()
+        sender = self.results_to_return_text
+        validator = sender.validator()
+        state = validator.validate(sender.text(), 0)[0]
 
-        date_format_lstbox.addItems(["20/03/2015", "03/20/2015"])
-        date_format_lstbox.setMaximumSize(QtCore.QSize(150, 30))
+        if state ==QtGui.QIntValidator.Acceptable:
+            color = '#c4df9b' #green
+        elif state == QtGui.QIntValidator.Intermediate:
+            color = '#fff79a' #yellow
+        else:
+            state = '#f6989d' #red
 
-        rows_to_return_text = QtGui.QTextEdit()
-        rows_to_return_text.setMaximumSize(QtCore.QSize(150, 30))
+        sender.setStyleSheet('QLineEdit {{ background-color: {color} }}'.format(color = color))
 
-        options_grid.addWidget(date_format_label, 1, 0)
-        options_grid.addWidget(date_format_lstbox, 1, 1)
-
-        options_grid.addWidget(rows_to_return_label, 2, 0)
-        options_grid.addWidget(rows_to_return_text, 2, 1)
-
-        self.advancedTab.setLayout(options_grid)
-
-
-
-
-
-        pass
 
     def keyPressEvent(self, event):
         if event.key() == QtCore.Qt.Key_F5:
@@ -256,10 +257,20 @@ class MainWidget(QtGui.QMainWindow):
         Sends the query and populates the TableWidget with the results
         """
 
+        #Get query from user
         query = str(self.queryTextEdit.toPlainText())
 
+        #Make sure query isn't empty
         if query.strip():
-            self.query_manager = XqlQueryManager.XqlQuery(self.writer.cursor, query)
+
+            python_date_format = self.date_formats[str(self.date_format_lstbox.currentText())]
+            results_to_return_text = self.results_to_return_text.text()
+            if not results_to_return_text: #If empty, choose default
+                results_to_return = 20
+            else:
+                results_to_return = abs(int(results_to_return_text))
+                
+            self.query_manager = XqlQueryManager.XqlQuery(self.writer.cursor, query, results_to_return, python_date_format)
 
             headers = self.query_manager.headers
             data = self.query_manager.get_results()
@@ -294,10 +305,18 @@ class MainWidget(QtGui.QMainWindow):
         data = [('Sid', '45', 'Hello', '24/01/1995'), ('Kra', '1', '43.2')]
         self.add_items_to_table(self.tableWidget, data, False)
 
-
-
         #TODO
         pass
+
+    class WorkerThread(QtCore.QThread):
+        def __init__(self, mainWindow):
+            super(QtCore.QThread, self).__init__()
+            self.mainWindow = mainWindow
+        def run(self):
+            self.mainWindow.beginProcess()
+            return
+        def __del__(self):
+            self.wait()
 
 def get_os_env():
     """
