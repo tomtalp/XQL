@@ -62,30 +62,37 @@ class XqlQuery(object):
 		pass
 
 	def get_results(self, return_all = False):
-        #TODO Consider the retuan_all == True possibility
 		"""
 		Return results to the client.
 
 		Once results are fetched from the cursor, try bringing the next set of results to check if there's data left.
 		"""
-		# The first time we fetch data, __awaiting_results is empty so we have to get new data
-		if not self.__awaiting_results:
-			results_for_client = self.fetch_data()
-		# If we already have awaiting_results, use them	
-		else:
-			results_for_client = self.__awaiting_results
 
-		self.__awaiting_results = self.fetch_data()		
-
-		# Check if there are any results left for the next query
-		if self.__awaiting_results:
-			self.has_awaiting_results = True
-		else:
+		if return_all:
+			# Get all the rows left in the cursor + awaiting results from previous times
+			# Order matters because we want to bring the previous results before the newly fetched data.
+			results_for_client = self.__awaiting_results + self.fetch_data(return_all) 
+			self.__awaiting_results = None
 			self.has_awaiting_results = False
+		else:
+			# The first time we fetch data, __awaiting_results is empty so we have to get new data
+			if not self.__awaiting_results:
+				results_for_client = self.fetch_data(return_all)
+			# If we already have awaiting_results, use them	
+			else:
+				results_for_client = self.__awaiting_results
+
+			self.__awaiting_results = self.fetch_data(return_all)		
+
+			# Check if there are any results left for the next query
+			if self.__awaiting_results:
+				self.has_awaiting_results = True
+			else:
+				self.has_awaiting_results = False
 
 		return results_for_client
 
-	def fetch_data(self):
+	def fetch_data(self, fetch_all = False):
 		"""
 		Fetch & parse data from the cursor. 
 
@@ -93,7 +100,10 @@ class XqlQuery(object):
 		Every value is casted into a string, because that's how Qt table widgets work!
 		"""
 
-		results_from_cursor = self.cursor.fetchmany(self.results_to_return)
+		if fetch_all:
+			results_from_cursor = self.cursor.fetchall()
+		else:
+			results_from_cursor = self.cursor.fetchmany(self.results_to_return)
 
 		results_for_client = []
 
