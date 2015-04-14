@@ -110,7 +110,14 @@ class XqlQuery(object):
 		for result in results_from_cursor:
 			row_for_client = []
 			for val in result:
-				value_for_client = str(val) # First str() cast will convert numbers to strings
+
+				value_for_client = val
+
+				# Convert floats that are a whole number to integers.					
+				if isinstance(value_for_client, float) and value_for_client.is_integer():
+					value_for_client = int(value_for_client) 
+
+				value_for_client = str(value_for_client) # First str() cast will convert numbers to strings
 
 				# Try converting to a datetime object to check if it's a date.
 				# SQLite dates are always returned in ISO-date format
@@ -126,8 +133,8 @@ class XqlQuery(object):
 					
 				if value_for_client is None:
 					value_for_client = ""
-
-				row_for_client.append(value_for_client)
+							
+				row_for_client.append(str(value_for_client))
 			
 			results_for_client.append(row_for_client)
 
