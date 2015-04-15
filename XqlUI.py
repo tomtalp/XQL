@@ -31,11 +31,6 @@ class MainWidget(QtGui.QMainWindow):
             self.startBtn.setEnabled(True)  # Activate the button that begins the process
             self.tabWidget.setToolTip("Press the 'Go!' button to begin working")
 
-    def beginProcessThread(self):
-        worker_thread = self.WorkerThread(self)
-        worker_thread.start()
-
-
     def beginProcess(self):
         """
         Begin writing the DB behind the scenes, clear the screen and when done transform the screen to the query interface.
@@ -190,8 +185,8 @@ class MainWidget(QtGui.QMainWindow):
 
         # Table
         self.tableWidget = QtGui.QTableWidget(self.queryTab)
-        self.tableWidget.setColumnCount(15)
-        self.tableWidget.setRowCount(30)
+        self.tableWidget.setColumnCount(1)
+        self.tableWidget.setRowCount(1)
         self.verticalLayout.addWidget(self.tableWidget)
 
         self.verticalLayout.setStretch(2, 1)
@@ -203,19 +198,31 @@ class MainWidget(QtGui.QMainWindow):
 
         self.options_grid = QtGui.QGridLayout()
 
+        self.advUiVerticalLayout1 = QtGui.QVBoxLayout(self.advancedTab)
+        self.advUiHorizontalLayout1 = QtGui.QHBoxLayout()
+        self.advUiHorizontalLayout2 = QtGui.QHBoxLayout()
+        self.advUiEmptyHorizontalLayout = QtGui.QHBoxLayout()
 
         self.date_formats = {"DD/MM/YYYY H:M:S": "%d/%m/%Y %H:%M:%S",
-                             "MM/DD/YYYY H:M:S": "%m/%d/%Y %H:%M:%S"}
+                             "MM/DD/YYYY H:M:S": "%m/%d/%Y %H:%M:%S",
+                             "YYYY/MM/DD H:M:S": "%Y/%m/%d %H:%M:%S",
+                             "DD/MM/YYYY": "%d/%m/%Y",}
 
         #Date Format input
-        self.date_format_label = QtGui.QLabel("Date Format: ") #Label
+        self.date_format_label = QtGui.QLabel("Date Format: ")
+        self.date_format_label.setMaximumSize(QtCore.QSize(100, 25))
+
         self.date_format_lstbox = QtGui.QComboBox()
+        self.date_format_lstbox.setMaximumSize(QtCore.QSize(100, 25))
+
         self.date_format_lstbox.addItems(self.date_formats.keys())
         self.date_format_lstbox.setCurrentIndex(self.date_formats.keys().index("DD/MM/YYYY H:M:S")) #Default
-        self.date_format_lstbox.setMaximumSize(QtCore.QSize(150, 30))
+        self.date_format_lstbox.setMaximumSize(QtCore.QSize(150, 30))  
 
         #Rows to return input
-        self.results_to_return_label = QtGui.QLabel("Rows to return: ") #Label
+        self.results_to_return_label = QtGui.QLabel("Rows to return: ") 
+        self.results_to_return_label.setMaximumSize(QtCore.QSize(100, 25))
+
         self.results_to_return_text = QtGui.QLineEdit('20')
         self.results_to_return_text.setMaximumSize(QtCore.QSize(150, 30))
         positive_int_regex = QtCore.QRegExp("^\d+$")
@@ -224,13 +231,22 @@ class MainWidget(QtGui.QMainWindow):
         self.results_to_return_text.textChanged.connect(self.check_state)
         self.results_to_return_text.textChanged.emit(self.results_to_return_text.text())
 
-        self.options_grid.addWidget(self.date_format_label, 1, 0)
-        self.options_grid.addWidget(self.date_format_lstbox, 1, 1)
+        self.advUiHorizontalLayout1.addWidget(self.date_format_label)
+        self.advUiHorizontalLayout1.addWidget(self.date_format_lstbox)
 
-        self.options_grid.addWidget(self.results_to_return_label, 2, 0)
-        self.options_grid.addWidget(self.results_to_return_text, 2, 1)
+        self.advUiVerticalLayout1.addLayout(self.advUiHorizontalLayout1)
 
-        self.advancedTab.setLayout(self.options_grid)
+        self.advUiHorizontalLayout2.addWidget(self.results_to_return_label)
+        self.advUiHorizontalLayout2.addWidget(self.results_to_return_text)
+
+        self.advUiVerticalLayout1.addLayout(self.advUiHorizontalLayout2)
+
+        self.spacer = QtGui.QSpacerItem(1, 1, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
+
+        self.advUiEmptyHorizontalLayout.addItem(self.spacer)
+        self.advUiVerticalLayout1.addLayout(self.advUiEmptyHorizontalLayout)
+
+        self.verticalLayout.setStretch(2, 1)
 
     def check_state(self, *args, **kwargs):
 
@@ -338,17 +354,6 @@ class MainWidget(QtGui.QMainWindow):
         else:
             self.showMoreBtn.setEnabled(False)
             self.showAllBtn.setEnabled(False)
-
-
-    class WorkerThread(QtCore.QThread):
-        def __init__(self, mainWindow):
-            super(QtCore.QThread, self).__init__()
-            self.mainWindow = mainWindow
-        def run(self):
-            self.mainWindow.beginProcess()
-            return
-        def __del__(self):
-            self.wait()
 
 def get_os_env():
     """
