@@ -117,24 +117,24 @@ class XqlQuery(object):
 				if isinstance(value_for_client, float) and value_for_client.is_integer():
 					value_for_client = int(value_for_client) 
 
-				value_for_client = str(value_for_client) # First str() cast will convert numbers to strings
+				value_for_client = str(value_for_client) # Convert numbers or anything else to strings
 
 				# Try converting to a datetime object to check if it's a date.
 				# SQLite dates are always returned in ISO-date format
 				try:
-					dt = datetime.datetime.strptime(value_for_client, self.date_format)			
+					dt = datetime.datetime.strptime(value_for_client, '%Y-%m-%d %H:%M:%S')
+
 				except ValueError:
 					# This isn't a date, do nothing and stay with the original value
 					pass
 				else:
 					# If the conversion was successful, parse with the user date_format
-					#value_for_client = dt.strftime(self.date_format)
-					value_for_client = dt.strftime('%d')
+					value_for_client = dt.strftime(self.date_format)
 					
 				if value_for_client is None:
 					value_for_client = ""
 							
-				row_for_client.append(str(value_for_client))
+				row_for_client.append(value_for_client)
 			
 			results_for_client.append(row_for_client)
 
