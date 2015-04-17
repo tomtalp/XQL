@@ -1,7 +1,8 @@
 from PyQt4 import QtGui, QtCore
 from XqlDbWriter import DBWriter
-import sys, time
-import os, datetime, XqlQueryManager
+import sys
+import os
+import XqlQueryManager
 
 
 class MainWidget(QtGui.QMainWindow):
@@ -9,55 +10,38 @@ class MainWidget(QtGui.QMainWindow):
     Main window class - Events, widgets and general design.
     """
 
-
     def __init__(self):
         super(MainWidget, self).__init__()
-
         self.initUI()
-
-    def openFile(self):
-        """
-        Handler for the 'open file' button. User picks a file and
-        """
-
-        path = QtGui.QFileDialog.getOpenFileName(self, 'Pick an Excel file', os.getenv(get_os_env()),
-                                                     "Excel Files (*.xls *.xlsx)")
-
-        # Change the screen only if a file was selected
-        if path:
-            self.file_path = str(path) # Convert QString to str
-            self.filePathLabel.setText("Selected {file_path}".format(file_path = self.file_path))
-            self.browseBtn.setText('Change file?')
-            self.startBtn.setEnabled(True)  # Activate the button that begins the process
-            self.tabWidget.setToolTip("Press the 'Go!' button to begin working")
-
-    def beginProcess(self):
-        """
-        Begin writing the DB behind the scenes, clear the screen and when done transform the screen to the query interface.
-        """
-        self.writer = DBWriter(self.file_path)
-        self.writer.write_to_db()
-
-        self.startBtn.setEnabled(False) # Once DB has been initialized, user shouldn't be able to click this button to init again.
-        self.tabWidget.setEnabled(True) # The tabs can now be used
-        self.tabWidget.setToolTip("") # Cancel the tooltip that instructs user to pick a file.
-
 
     def initUI(self):
         """
-        Main function for initializing & designing the UI
+        Initializing & designing the UI
         """
 
-        self.setGeometry(100, 100, 1250, 850)
+        self.showMaximized()
         self.setWindowTitle("XQL")
 
         self.centralWidget = QtGui.QWidget(self)
 
-        # Vertical & Horizontal layout objects
-        self.verticalLayout_2 = QtGui.QVBoxLayout(self.centralWidget)
+        # Main Vertical & Horizontal layout objects
+        self.mainHorizontalLayout = QtGui.QHBoxLayout(self.centralWidget)
+        self.mainVerticalLayout = QtGui.QVBoxLayout()
+        self.sideTreeLayout = QtGui.QHBoxLayout()
+
+        self.mainHorizontalLayout.addLayout(self.sideTreeLayout)
+        self.mainHorizontalLayout.addLayout(self.mainVerticalLayout)
+        
+        self.treeWidget = QtGui.QTreeWidget(self.centralWidget)
+        self.sideTreeLayout.addWidget(self.treeWidget) 
+        self.treeWidget.setMaximumSize(QtCore.QSize(250, 16777215))
+        treeHeader = QtGui.QTreeWidgetItem(["Files"])
+        self.treeWidget.setHeaderItem(treeHeader)
+
         self.horizontalLayout = QtGui.QHBoxLayout()
         self.horizontalLayout.setContentsMargins(-1, -1, 0, -1)
-        self.horizontalLayout_2 = QtGui.QHBoxLayout()
+        self.horizontalLayout_2 = QtGui.QHBoxLayout()     
+
 
         # Button for browsing files
         self.browseBtn = QtGui.QPushButton("Browse", self.centralWidget)
@@ -80,7 +64,7 @@ class MainWidget(QtGui.QMainWindow):
         self.startBtn.clicked.connect(self.beginProcess) # Once clicked we begin writing the db behind the scenes.
 
         self.horizontalLayout.addWidget(self.startBtn)
-        self.verticalLayout_2.addLayout(self.horizontalLayout)
+        self.mainVerticalLayout.addLayout(self.horizontalLayout)
 
         # Tabs
         self.tabWidget = QtGui.QTabWidget(self.centralWidget)
@@ -94,7 +78,7 @@ class MainWidget(QtGui.QMainWindow):
 
         self.setCentralWidget(self.centralWidget)
 
-        self.verticalLayout_2.addWidget(self.tabWidget)
+        self.mainVerticalLayout.addWidget(self.tabWidget)
 
         self.initQueryUI() # Initialize the query area, which is disabled until the user creates the DB.
         self.initAdvancedUI()
@@ -107,8 +91,15 @@ class MainWidget(QtGui.QMainWindow):
         self.menuAbout.addAction(self.actionAbout_XQL)
         self.menubar.addAction(self.menuAbout.menuAction())
 
-        self.setMenuBar(self.menubar)
+        self.setMenuBar(self.menubar)      
 
+        self.initStyleSheet()
+        self.show()
+
+    def initStyleSheet(self):
+        """
+        Run setStyleSheet() with our CSS code
+        """
         self.setStyleSheet("""
             .QMainWindow {
                 background-color: green;
@@ -145,7 +136,19 @@ class MainWidget(QtGui.QMainWindow):
 
             """)
 
-        self.show()
+    def addFileToTree(self, xql_db_obj):
+        """
+        Adds an Excel file to the side bar Tree Widget.
+        """
+
+        tree_root_file = QtGui.QTreeWidgetItem(self.treeWidget, [xql_db_obj.name])
+
+        for table in xql_db_obj.tables:
+            tree_table_obj = QtGui.QTreeWidgetItem(tree_root_file, [table.name])
+
+            for col_name, col_type in table.headers.iteritems():
+                tree_header_obj = QtGui.QTreeWidgetItem(tree_table_obj, ["{col_name} ({col_type})".format(col_name = col_name, col_type = col_type)])
+
 
     def initQueryUI(self):
         """
@@ -248,6 +251,36 @@ class MainWidget(QtGui.QMainWindow):
 
         self.verticalLayout.setStretch(2, 1)
 
+    def openFile(self):
+        """
+        Handler for the 'open file' button. User picks a file and
+        """
+
+        path = QtGui.QFileDialog.getOpenFileName(self, 'Pick an Excel file', os.getenv(get_os_env()),
+                                                     "Excel Files (*.xls *.xlsx)")
+
+        # Change the screen only if a file was selected
+        if path:
+            self.file_path = str(path) # Convert QString to str
+            self.filePathLabel.setText("Selected {file_path}".format(file_path = self.file_path))
+            self.browseBtn.setText('Change file?')
+            self.startBtn.setEnabled(True)  # Activate the button that begins the process
+            self.tabWidget.setToolTip("Press the 'Go!' button to begin working")
+
+    def beginProcess(self):
+        """
+        Begin writing the DB behind the scenes, clear the screen and when done transform the screen to the query interface.
+        """
+        self.writer = DBWriter(self.file_path)
+        self.writer.write_to_db()
+
+        self.startBtn.setEnabled(False) # Once DB has been initialized, user shouldn't be able to click this button to init again.
+        self.tabWidget.setEnabled(True) # The tabs can now be used
+        self.tabWidget.setToolTip("") # Cancel the tooltip that instructs user to pick a file.
+
+        xql_db = self.writer.XqlDB
+        self.addFileToTree(xql_db)
+
     def check_state(self, *args, **kwargs):
 
         """
@@ -266,7 +299,6 @@ class MainWidget(QtGui.QMainWindow):
             state = '#f6989d' #red
 
         sender.setStyleSheet('QLineEdit {{ background-color: {color} }}'.format(color = color))
-
 
     def keyPressEvent(self, event):
         """
