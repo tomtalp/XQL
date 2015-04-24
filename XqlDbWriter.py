@@ -5,7 +5,6 @@
 
 import sqlite3
 import XqlParser
-import datetime
 
 class DBWriter(object):
 	def __init__(self, file_path, bulk_amount = 5):
