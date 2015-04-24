@@ -4,7 +4,7 @@
 #           This module gets a path to an XLS(X) file and parses it.
 #
 #           Sheets become tables
-#
+# 
 ################################################################################################
 from distutils.command.build_scripts import first_line_re
 

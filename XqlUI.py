@@ -145,7 +145,7 @@ class MainWidget(QtGui.QMainWindow):
 
         for table in xql_db_obj.tables:
             tree_table_obj = QtGui.QTreeWidgetItem(tree_root_file, [table.name])
-            
+
             for col_name, col_type in table.headers.iteritems():
                 tree_header_obj = QtGui.QTreeWidgetItem(tree_table_obj, ["{col_name} ({col_type})".format(col_name = col_name, col_type = col_type)])
 
