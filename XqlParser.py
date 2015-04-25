@@ -18,7 +18,11 @@ class XqlDB(object):
         self.name = 'MyDB'
         self.schemas = []
 
-    def add_schema(self, xql_schema):
+    def append_schema(self, xql_schema):
+        """
+        Check if schema name already exists, adds number suffix if it does
+        """
+
         schema_names = [schema.name for schema in self.schemas]
         if xql_schema.name in schema_names:
             suffix = 2
@@ -30,13 +34,9 @@ class XqlDB(object):
 
         self.schemas.append(xql_schema)
 
-    def get_table_names(self):
-        all_tables = []
-        for schema in self.schemas:
-            for table in schema.tables:
-                all_tables.append(table.name)
-        return all_tables
-
+    def add_xls(self, xls_path, rows_per_iter):
+        schema = parse_xls_to_schema(len(self.schemas), xls_path, rows_per_iter)
+        self.append_schema(schema)
 
     def __str__(self):
         return self.name
@@ -51,22 +51,18 @@ class XqlSchema(object):
 
     def add_table(self, xql_table):
         """
-        if the table already exists in another scheme, add DB{NUM} as start
+        if the table already exists in another scheme, add a number suffix
         """
-        print 'BEFORE: ' + xql_table.name
         filtered_table_name = filter_name(xql_table.name)
         table_names = [table.name for table in self.tables]
-        print 'TABLES: ' + str(table_names)
         if xql_table.name in table_names:
             prefix = 2
             temp_table_name = filtered_table_name + '_1'
             while temp_table_name in table_names:
-                temp_table_name = table.name + '_{pre}'.format(pre = prefix)
+                temp_table_name = '{table}_{pre}'.format(table = table.name, pre = prefix)
                 prefix += 1
-            print 'CHANGED'
             xql_table.name = temp_table_name
         self.tables.append(xql_table)
-        print 'AFTER: ' + xql_table.name
 
 
     def __str__(self):
@@ -125,7 +121,7 @@ def parse_multiple_xls_to_db(xls_paths, rows_per_iter):
             schema = parse_xls_to_schema(-1, xls_path, rows_per_iter)
         else:
             schema = parse_xls_to_schema(index + 1, xls_path, rows_per_iter)
-        parsed_db.add_schema(schema)
+        parsed_db.append_schema(schema)
     return parsed_db
 
 def parse_xls_to_schema(index, xls_path, rows_per_iter):
