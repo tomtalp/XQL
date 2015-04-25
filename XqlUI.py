@@ -1,10 +1,21 @@
 from PyQt4 import QtGui, QtCore
 from XqlDbWriter import DBWriter
-import sys
-import os
-import XqlQueryManager
-import threading
+from XqlParser import XqlDB
+import sys, os
+import XqlQueryManager, XqlParser
 
+class WritingThread(QtCore.QThread):
+
+    playLoadingSignal = QtCore.pyqtSignal()
+    stopLoadingSignal = QtCore.pyqtSignal()
+    addToTreeSignal = QtCore.pyqtSignal(XqlParser.XqlDB)
+
+    def __init__(self, main_window):
+        QtCore.QThread.__init__(self)
+        self.main_window = main_window
+
+    def run(self):
+        self.main_window.beginProcess()
 
 class MainWidget(QtGui.QMainWindow):
     """
@@ -63,7 +74,7 @@ class MainWidget(QtGui.QMainWindow):
         self.startBtn.setEnabled(False)
         self.startBtn.setMaximumSize(QtCore.QSize(100, 25))
 
-        self.startBtn.clicked.connect(self.beginProcess) # Once clicked we begin writing the db behind the scenes.
+        self.startBtn.clicked.connect(self.beginProcessThread) # Once clicked we begin writing the db behind the scenes.
 
         self.horizontalLayout.addWidget(self.startBtn)
         self.mainVerticalLayout.addLayout(self.horizontalLayout)
@@ -138,6 +149,7 @@ class MainWidget(QtGui.QMainWindow):
             }
 
             """)
+
 
     def addFileToTree(self, xql_db_obj):
         """
@@ -304,40 +316,45 @@ class MainWidget(QtGui.QMainWindow):
         self.loading_label.deleteLater()
         self.loading_label = QtGui.QLabel("", self) # Initialize it again in case user uploads a new DB
 
+    def beginProcessThread(self):
+        self.writing_thread = WritingThread(self)
+
+        #Signals
+        self.writing_thread.playLoadingSignal.connect(self.playLoadingGif)
+        self.writing_thread.stopLoadingSignal.connect(self.stopLoadingGif)
+        self.writing_thread.addToTreeSignal.connect(self.addFileToTree)
+
+        self.writing_thread.start()
 
     def beginProcess(self):
         """
         Begin writing the DB behind the scenes, clear the screen and when done transform the screen to the query interface.
         """
         self.writer = None
-        writing_thread = threading.Thread(target = self.create_db) # Send the db creation task to another thread
-        writing_thread.start()
-        
-        self.playLoadingGif()
-
         self.startBtn.setEnabled(False) # Once DB has been initialized, user shouldn't be able to click this button to init again.
+        self.create_db()
+        self.db_creation_complete()
+
        
     def create_db(self):
         """
         Write the Excel file to the DB.
         When task is done, call the "creation_complete" function to modify the GUI
         """
+        self.writing_thread.playLoadingSignal.emit()
         self.writer = DBWriter(self.file_path)
         self.writer.write_to_db()
-
-        self.db_creation_complete()
 
     def db_creation_complete(self):
         """
         Modify the GUI once the DB has been loaded - stop the .gif, enable buttons & populate the file tree.
         """
-        self.stopLoadingGif()
-        
+        self.writing_thread.stopLoadingSignal.emit()
         self.tabWidget.setEnabled(True) # The tabs can now be used
         self.tabWidget.setToolTip("") # Cancel the tooltip that instructs user to pick a file.
 
         xql_db = self.writer.XqlDB
-        self.addFileToTree(xql_db)
+        self.writing_thread.addToTreeSignal.emit(xql_db)
 
 
     def check_state(self, *args, **kwargs):
@@ -444,6 +461,8 @@ class MainWidget(QtGui.QMainWindow):
         else:
             self.showMoreBtn.setEnabled(False)
             self.showAllBtn.setEnabled(False)
+
+
 
 def get_os_env():
     """
