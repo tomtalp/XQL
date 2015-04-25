@@ -156,13 +156,13 @@ class MainWidget(QtGui.QMainWindow):
         Adds an Excel file to the side bar Tree Widget.
         """
 
-        tree_root_file = QtGui.QTreeWidgetItem(self.treeWidget, [xql_db_obj.name])
+        for schema in xql_db_obj.schemas:
+            tree_schema_obj = QtGui.QTreeWidgetItem(self.treeWidget, [schema.name])
 
-        for table in xql_db_obj.tables:
-            tree_table_obj = QtGui.QTreeWidgetItem(tree_root_file, [table.name])
-
-            for col_name, col_type in table.headers.iteritems():
-                tree_header_obj = QtGui.QTreeWidgetItem(tree_table_obj, ["{col_name} ({col_type})".format(col_name = col_name, col_type = col_type)])
+            for table in schema.tables:
+                tree_table_obj = QtGui.QTreeWidgetItem(tree_schema_obj, [table.name])
+                for col_name, col_type in table.headers.iteritems():
+                    tree_header_obj = QtGui.QTreeWidgetItem(tree_table_obj, ["{col_name} ({col_type})".format(col_name = col_name, col_type = col_type)])
 
     def initQueryButtons(self):
         """
@@ -287,8 +287,8 @@ class MainWidget(QtGui.QMainWindow):
 
         # Change the screen only if a file was selected
         if paths:
-            self.file_paths = [os.path.basename(str(base_name)) for base_name in paths] # Convert QString to str
-            self.filePathLabel.setText("Selected {file_paths}".format(file_paths = ', '.join(self.file_paths)))
+            self.file_paths = [str(path) for path in paths] # Convert QString to str
+            self.filePathLabel.setText("Selected {file_paths}".format(file_paths = ', '.join([os.path.basename(str(path)) for path in self.file_paths])))
             self.browseBtn.setText('Change file?')
             self.startBtn.setEnabled(True)  # Activate the button that begins the process
             self.tabWidget.setToolTip("Press the 'Go!' button to begin working")
@@ -343,7 +343,7 @@ class MainWidget(QtGui.QMainWindow):
         When task is done, call the "creation_complete" function to modify the GUI
         """
         self.writing_thread.playLoadingSignal.emit()
-        self.writer = DBWriter(self.file_path)
+        self.writer = DBWriter(self.file_paths)
         self.writer.write_to_db()
 
     def db_creation_complete(self):

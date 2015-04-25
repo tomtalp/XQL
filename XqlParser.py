@@ -132,7 +132,7 @@ def parse_xls_to_schema(index, xls_path, rows_per_iter):
 
     #Parse each sheet in the xls file
     for sheet in source_workbook.sheets():
-        print 'Now parsing {file}, sheet "{sheet_name}"'.format(file = file_name, sheet_name = sheet.name)
+        #print 'Now parsing {file}, sheet "{sheet_name}"'.format(file = file_name, sheet_name = sheet.name).decode('utf-8')
         table = parse_sheet_to_table(source_workbook, sheet, rows_per_iter, index)
 
         #Add only if table exists
