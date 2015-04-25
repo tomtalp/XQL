@@ -13,7 +13,7 @@ class DBWriter(object):
 		self.XqlDB = XqlParser.parse_xls_to_db(file_path, self.bulk_amount)
 		
 		# Write to memory and not to disk to avoid dbs staying on the users system after program has exited (will happen in case of crashes i.e)
-		self.db_conn = sqlite3.connect(":memory:")
+		self.db_conn = sqlite3.connect(":memory:", check_same_thread = False)
 		self.cursor = self.db_conn.cursor()
 
 	def write_to_db(self):

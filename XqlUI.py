@@ -3,6 +3,7 @@ from XqlDbWriter import DBWriter
 import sys
 import os
 import XqlQueryManager
+import threading
 
 
 class MainWidget(QtGui.QMainWindow):
@@ -12,6 +13,7 @@ class MainWidget(QtGui.QMainWindow):
 
     def __init__(self):
         super(MainWidget, self).__init__()
+        self.loading_gif_path = "/home/user/Desktop/XQL/loading.gif"
         self.initUI()
 
     def initUI(self):
@@ -34,7 +36,7 @@ class MainWidget(QtGui.QMainWindow):
         
         self.treeWidget = QtGui.QTreeWidget(self.centralWidget)
         self.sideTreeLayout.addWidget(self.treeWidget) 
-        self.treeWidget.setMaximumSize(QtCore.QSize(250, 16777215))
+        self.treeWidget.setMaximumSize(QtCore.QSize(225, 16777215))
         treeHeader = QtGui.QTreeWidgetItem(["Files"])
         self.treeWidget.setHeaderItem(treeHeader)
 
@@ -52,8 +54,8 @@ class MainWidget(QtGui.QMainWindow):
         self.filePathLabel = QtGui.QLabel("", self) # Show nothing until initialized with a file.
         self.horizontalLayout_2.addWidget(self.filePathLabel)
 
-        self.file_written_lbl = QtGui.QLabel("", self)
-        self.horizontalLayout_2.addWidget(self.file_written_lbl)
+        self.loading_label = QtGui.QLabel("", self)
+        self.horizontalLayout_2.addWidget(self.loading_label)
 
         self.horizontalLayout.addLayout(self.horizontalLayout_2)
 
@@ -80,6 +82,7 @@ class MainWidget(QtGui.QMainWindow):
 
         self.mainVerticalLayout.addWidget(self.tabWidget)
 
+        self.tabsVerticalLayout = QtGui.QVBoxLayout(self.queryTab)
         self.initQueryUI() # Initialize the query area, which is disabled until the user creates the DB.
         self.initAdvancedUI()
 
@@ -149,16 +152,13 @@ class MainWidget(QtGui.QMainWindow):
             for col_name, col_type in table.headers.iteritems():
                 tree_header_obj = QtGui.QTreeWidgetItem(tree_table_obj, ["{col_name} ({col_type})".format(col_name = col_name, col_type = col_type)])
 
-
-    def initQueryUI(self):
+    def initQueryButtons(self):
         """
-        Initialize the query UI (table & SQL query text input) 
-        Called once the user picks an Excel file and transforms the Excel to a DB.
+        Initialize query buttons for execution & results fetching
         """
-        self.verticalLayout = QtGui.QVBoxLayout(self.queryTab)
+        
         self.horizontalLayout_6 = QtGui.QHBoxLayout()
 
-        # Buttons above the textbox
         self.execButton = QtGui.QPushButton("Execute (F5)", self.queryTab)
         self.execButton.setMaximumSize(QtCore.QSize(100, 25))
         self.execButton.clicked.connect(self.sendQuery)
@@ -180,19 +180,33 @@ class MainWidget(QtGui.QMainWindow):
         self.horizontalLayout_6.addWidget(self.showAllBtn)
         self.showAllBtn.setEnabled(False)
 
-        self.verticalLayout.addLayout(self.horizontalLayout_6)
+        self.tabsVerticalLayout.addLayout(self.horizontalLayout_6)
 
-        # Textbox
+    def initQueryTextBox(self):
+        """
+        Initialize the query textbox
+        """
         self.queryTextEdit = QtGui.QPlainTextEdit(self.queryTab)
-        self.verticalLayout.addWidget(self.queryTextEdit)
-
-        # Table
+        self.tabsVerticalLayout.addWidget(self.queryTextEdit)
+    
+    def initResultsTable(self):
+        """
+        Initialize the table widget
+        """
         self.tableWidget = QtGui.QTableWidget(self.queryTab)
         self.tableWidget.setColumnCount(1)
         self.tableWidget.setRowCount(1)
-        self.verticalLayout.addWidget(self.tableWidget)
+        self.tabsVerticalLayout.addWidget(self.tableWidget)
 
-        self.verticalLayout.setStretch(2, 1)
+    def initQueryUI(self):
+        """
+        Initialize the query UI (table & SQL query text input) 
+        """                     
+        self.initQueryButtons()
+        self.initQueryTextBox()
+        self.initResultsTable()
+       
+        self.tabsVerticalLayout.setStretch(2, 1)
 
     def initAdvancedUI(self):
         """
@@ -249,7 +263,7 @@ class MainWidget(QtGui.QMainWindow):
         self.advUiEmptyHorizontalLayout.addItem(self.spacer)
         self.advUiVerticalLayout1.addLayout(self.advUiEmptyHorizontalLayout)
 
-        self.verticalLayout.setStretch(2, 1)
+        self.tabsVerticalLayout.setStretch(2, 1)
 
     def openFile(self):
         """
@@ -267,22 +281,66 @@ class MainWidget(QtGui.QMainWindow):
             self.startBtn.setEnabled(True)  # Activate the button that begins the process
             self.tabWidget.setToolTip("Press the 'Go!' button to begin working")
 
+    def playLoadingGif(self):
+        """
+        Begin playing the loading gif
+        """
+        self.movie = QtGui.QMovie(self.loading_gif_path, QtCore.QByteArray(), self)
+        size = self.movie.scaledSize()
+
+        self.movie_screen = QtGui.QLabel()
+        self.movie_screen.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
+
+        self.movie.setCacheMode(QtGui.QMovie.CacheAll)
+        self.movie.setSpeed(100)
+        self.loading_label.setMovie(self.movie)
+        self.movie.start()
+
+    def stopLoadingGif(self):
+        """
+        Stop the loading gif
+        """
+        self.movie.stop()
+        self.loading_label.deleteLater()
+        self.loading_label = QtGui.QLabel("", self) # Initialize it again in case user uploads a new DB
+
+
     def beginProcess(self):
         """
         Begin writing the DB behind the scenes, clear the screen and when done transform the screen to the query interface.
         """
+        self.writer = None
+        writing_thread = threading.Thread(target = self.create_db) # Send the db creation task to another thread
+        writing_thread.start()
+        
+        self.playLoadingGif()
+
+        self.startBtn.setEnabled(False) # Once DB has been initialized, user shouldn't be able to click this button to init again.
+       
+    def create_db(self):
+        """
+        Write the Excel file to the DB.
+        When task is done, call the "creation_complete" function to modify the GUI
+        """
         self.writer = DBWriter(self.file_path)
         self.writer.write_to_db()
 
-        self.startBtn.setEnabled(False) # Once DB has been initialized, user shouldn't be able to click this button to init again.
+        self.db_creation_complete()
+
+    def db_creation_complete(self):
+        """
+        Modify the GUI once the DB has been loaded - stop the .gif, enable buttons & populate the file tree.
+        """
+        self.stopLoadingGif()
+        
         self.tabWidget.setEnabled(True) # The tabs can now be used
         self.tabWidget.setToolTip("") # Cancel the tooltip that instructs user to pick a file.
 
         xql_db = self.writer.XqlDB
         self.addFileToTree(xql_db)
 
-    def check_state(self, *args, **kwargs):
 
+    def check_state(self, *args, **kwargs):
         """
         Checks the state of results_to_return_text and changes its color accordingly
         """
