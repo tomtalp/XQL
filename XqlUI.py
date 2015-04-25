@@ -24,7 +24,7 @@ class MainWidget(QtGui.QMainWindow):
 
     def __init__(self):
         super(MainWidget, self).__init__()
-        self.loading_gif_path = "/home/user/Desktop/XQL/loading.gif"
+        self.loading_gif_path = "loading.gif"
         self.initUI()
 
     def initUI(self):

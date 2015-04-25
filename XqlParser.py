@@ -27,10 +27,6 @@ class XqlDB(object):
     def __repr__(self):
         return self.__str__()
 
-class XqlScheme(object):
-    def __init__(self, name):
-        self.name = filter_name(name)
-        self.tables = []
 
 class XqlTable(object):
     def __init__(self, name):
