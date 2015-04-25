@@ -256,13 +256,13 @@ class MainWidget(QtGui.QMainWindow):
         Handler for the 'open file' button. User picks a file and
         """
 
-        path = QtGui.QFileDialog.getOpenFileName(self, 'Pick an Excel file', os.getenv(get_os_env()),
+        paths = QtGui.QFileDialog.getOpenFileNames(self, 'Pick an Excel file', os.getenv(get_os_env()),
                                                      "Excel Files (*.xls *.xlsx)")
 
         # Change the screen only if a file was selected
-        if path:
-            self.file_path = str(path) # Convert QString to str
-            self.filePathLabel.setText("Selected {file_path}".format(file_path = self.file_path))
+        if paths:
+            self.file_paths = [os.path.basename(str(base_name)) for base_name in paths] # Convert QString to str
+            self.filePathLabel.setText("Selected {file_paths}".format(file_paths = ', '.join(self.file_paths)))
             self.browseBtn.setText('Change file?')
             self.startBtn.setEnabled(True)  # Activate the button that begins the process
             self.tabWidget.setToolTip("Press the 'Go!' button to begin working")
@@ -271,7 +271,7 @@ class MainWidget(QtGui.QMainWindow):
         """
         Begin writing the DB behind the scenes, clear the screen and when done transform the screen to the query interface.
         """
-        self.writer = DBWriter(self.file_path)
+        self.writer = DBWriter(self.file_paths)
         self.writer.write_to_db()
 
         self.startBtn.setEnabled(False) # Once DB has been initialized, user shouldn't be able to click this button to init again.

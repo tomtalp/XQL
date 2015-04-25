@@ -7,9 +7,9 @@ import sqlite3
 import XqlParser
 
 class DBWriter(object):
-	def __init__(self, file_path, bulk_amount = 5):
+	def __init__(self, file_paths, bulk_amount = 5):
 		self.bulk_amount = bulk_amount
-		self.XqlDB = XqlParser.parse_xls_to_db(file_path, self.bulk_amount)
+		self.XqlDB = XqlParser.parse_multiple_xls_to_db(file_paths, self.bulk_amount)
 		
 		# Write to memory and not to disk to avoid dbs staying on the users system after program has exited (will happen in case of crashes i.e)
 		self.db_conn = sqlite3.connect(":memory:")

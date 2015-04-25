@@ -14,9 +14,9 @@ SQLITE3_KEYWORDS = ['ABORT', 'ACTION', 'ADD', 'AFTER', 'ALL', 'ALTER', 'ANALYZE'
 
 ####### Classes #######
 class XqlDB(object):
-    def __init__(self, name):
-        self.name = name
-        self.tables = []
+    def __init__(self):
+        self.name = 'MyDB'
+        self.schemes = []
 
     def add_table(self, table):
         self.tables.append(table)
@@ -27,10 +27,14 @@ class XqlDB(object):
     def __repr__(self):
         return self.__str__()
 
+class XqlScheme(object):
+    def __init__(self, name):
+        self.name = filter_name(name)
+        self.tables = []
 
 class XqlTable(object):
     def __init__(self, name):
-        self.name = name.upper()
+        self.name = filter_name(name)
         self.headers = {}
         self.gen_rows = None
 
@@ -72,9 +76,13 @@ def filter_name(name):
         filtered_name_stripped = 'Xql_{name}'.format(name = filtered_name)
     return filtered_name_stripped
 
-def parse_xls_to_db(xls_path, rows_per_iter):
+def parse_multiple_xls_to_db(xls_paths, rows_per_iter):
+    parsed_db = XqlDB()
+    for xls_path in xls_paths:
+        parsed_db.schemes.append(parse_xls_to_scheme(parsed_db, xls_path))
+
+def parse_xls_to_scheme(parsed_db, xls_path, rows_per_iter):
     file_name = os.path.splitext(os.path.basename(xls_path))[0]
-    parsed_db = XqlDB(filter_name(file_name))
     source_workbook = xlrd.open_workbook(xls_path)
 
     #Parse each sheet in the xls file
