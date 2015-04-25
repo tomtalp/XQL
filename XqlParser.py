@@ -35,8 +35,9 @@ class XqlDB(object):
         self.schemas.append(xql_schema)
 
     def add_xls(self, xls_paths, rows_per_iter):
+        """ parses more xls files after initial DB has been created"""
         for xls_path in xls_paths:
-            if not xls_path in [xql_schema.full_path for xql_schema in self.schemas]:
+            if not xls_path in [xql_schema.full_path for xql_schema in self.schemas]: #Make sure the xls hasn't been parsed yet
                 schema = parse_xls_to_schema(len(self.schemas), xls_path, rows_per_iter)
                 self.append_schema(schema)
 
@@ -51,7 +52,7 @@ class XqlSchema(object):
         self.name = filter_name(os.path.splitext(os.path.basename(full_path))[0])
         self.full_path = full_path
         self.tables = []
-        self.processed = False
+        self.processed = False #To know later if it has already been created
 
     def add_table(self, xql_table):
         """

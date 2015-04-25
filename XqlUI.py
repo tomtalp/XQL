@@ -167,7 +167,7 @@ class MainWidget(QtGui.QMainWindow):
         """
 
         for schema in xql_db_obj.schemas:
-            if not schema.processed:
+            if not schema.processed: #Make sure it hasn't been added yet
                 tree_schema_obj = QtGui.QTreeWidgetItem(self.treeWidget, [schema.name])
 
                 for table in schema.tables:

@@ -16,6 +16,7 @@ class DBWriter(object):
         self.cursor = self.db_conn.cursor()
 
     def add_xls(self, xls_paths):
+        """adds more xls to DB after DB has been initialized"""
         self.XqlDB.add_xls(xls_paths, self.bulk_amount)
 
     def write_to_db(self):
