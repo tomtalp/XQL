@@ -15,15 +15,21 @@ class DBWriter(object):
         self.db_conn = sqlite3.connect(":memory:", check_same_thread = False)
         self.cursor = self.db_conn.cursor()
 
+    def add_xls(self, xls_paths):
+        self.XqlDB.add_xls(xls_paths, self.bulk_amount)
+
     def write_to_db(self):
         """
         Write an XqlDB to SQLite
         """
         for schema in self.XqlDB.schemas:
-            for tb in schema.tables:
-                print 'starting with '
-                self.create_tb(tb)
-                print 'done with '
+            if not schema.processed:
+                for tb in schema.tables:
+                    print 'starting with '
+                    print tb
+                    self.create_tb(tb)
+                    print 'done with '
+                    print tb
 
     def create_tb(self, tb):
         """

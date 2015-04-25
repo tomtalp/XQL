@@ -109,6 +109,8 @@ class MainWidget(QtGui.QMainWindow):
 
         self.setMenuBar(self.menubar)      
 
+        self.writer = None
+
         self.initStyleSheet()
         self.show()
 
@@ -165,12 +167,14 @@ class MainWidget(QtGui.QMainWindow):
         """
 
         for schema in xql_db_obj.schemas:
-            tree_schema_obj = QtGui.QTreeWidgetItem(self.treeWidget, [schema.name])
+            if not schema.processed:
+                tree_schema_obj = QtGui.QTreeWidgetItem(self.treeWidget, [schema.name])
 
-            for table in schema.tables:
-                tree_table_obj = QtGui.QTreeWidgetItem(tree_schema_obj, [table.name])
-                for col_name, col_type in table.headers.iteritems():
-                    tree_header_obj = QtGui.QTreeWidgetItem(tree_table_obj, ["{col_name} ({col_type})".format(col_name = col_name, col_type = col_type)])
+                for table in schema.tables:
+                    tree_table_obj = QtGui.QTreeWidgetItem(tree_schema_obj, [table.name])
+                    for col_name, col_type in table.headers.iteritems():
+                        tree_header_obj = QtGui.QTreeWidgetItem(tree_table_obj, ["{col_name} ({col_type})".format(col_name = col_name, col_type = col_type)])
+                schema.processed = True
 
     def initQueryButtons(self):
         """
@@ -342,22 +346,16 @@ class MainWidget(QtGui.QMainWindow):
         if not self.writer:
             #If no db has been created
             try:
-                self.writer = DBWriter(self.file_paths)
-                #self.startBtn.setEnabled(False) # Once DB has been initialized, user shouldn't be able to click this button to init again.
                 self.create_db()
                 self.db_creation_complete()
             except UnicodeError:
                 self.UnicodeSignal.emit()
         else:
             #If db has already been created, add new schemas
-            self.writer.XqlDB.add_xls(self.file_paths)
+            self.writer.add_xls(self.file_paths) #Adds them to the XqlDB
+            self.writer.write_to_db()
+            self.writing_thread.addToTreeSignal.emit(self.writer.XqlDB)
 
-
-
-        self.writer = None
-
-
-       
     def create_db(self):
         """
         Write the Excel file to the DB.

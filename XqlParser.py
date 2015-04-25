@@ -36,8 +36,9 @@ class XqlDB(object):
 
     def add_xls(self, xls_paths, rows_per_iter):
         for xls_path in xls_paths:
-            schema = parse_xls_to_schema(len(self.schemas), xls_path, rows_per_iter)
-            self.append_schema(schema)
+            if not xls_path in [xql_schema.full_path for xql_schema in self.schemas]:
+                schema = parse_xls_to_schema(len(self.schemas), xls_path, rows_per_iter)
+                self.append_schema(schema)
 
     def __str__(self):
         return self.name
@@ -46,9 +47,11 @@ class XqlDB(object):
         return self.__str__()
 
 class XqlSchema(object):
-    def __init__(self, name):
-        self.name = filter_name(name)
+    def __init__(self, full_path):
+        self.name = filter_name(os.path.splitext(os.path.basename(full_path))[0])
+        self.full_path = full_path
         self.tables = []
+        self.processed = False
 
     def add_table(self, xql_table):
         """
@@ -131,8 +134,7 @@ def parse_multiple_xls_to_db(xls_paths, rows_per_iter):
 
 def parse_xls_to_schema(index, xls_path, rows_per_iter):
 
-    file_name = os.path.splitext(os.path.basename(xls_path))[0]
-    schema = XqlSchema(file_name)
+    schema = XqlSchema(xls_path)
     source_workbook = xlrd.open_workbook(xls_path)
 
     #Parse each sheet in the xls file
@@ -153,9 +155,12 @@ def parse_sheet_to_table(workbook, sheet, rows_per_iter, index):
 
     #minimum 1 rows (only header)
     if last_col >= 0:
-        table = XqlTable(sheet.name)
         if index != -1:
-            sheet_name = 'DB{num}_{name}'.format(num = index, name = table.name)
+            sheet_name = 'DB{num}_{name}'.format(num = index, name = sheet.name)
+        else:
+            sheet_name = sheet.name
+        table = XqlTable(sheet_name)
+
 
 
         #If we want to find where the table actually starts (might not start at 0, 0),
