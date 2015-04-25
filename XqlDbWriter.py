@@ -22,10 +22,8 @@ class DBWriter(object):
         for schema in self.XqlDB.schemas:
             for tb in schema.tables:
                 print 'starting with '
-                print tb
                 self.create_tb(tb)
                 print 'done with '
-                print tb
 
     def create_tb(self, tb):
         """

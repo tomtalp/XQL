@@ -34,9 +34,10 @@ class XqlDB(object):
 
         self.schemas.append(xql_schema)
 
-    def add_xls(self, xls_path, rows_per_iter):
-        schema = parse_xls_to_schema(len(self.schemas), xls_path, rows_per_iter)
-        self.append_schema(schema)
+    def add_xls(self, xls_paths, rows_per_iter):
+        for xls_path in xls_paths:
+            schema = parse_xls_to_schema(len(self.schemas), xls_path, rows_per_iter)
+            self.append_schema(schema)
 
     def __str__(self):
         return self.name
@@ -46,18 +47,17 @@ class XqlDB(object):
 
 class XqlSchema(object):
     def __init__(self, name):
-        self.name = name
+        self.name = filter_name(name)
         self.tables = []
 
     def add_table(self, xql_table):
         """
         if the table already exists in another scheme, add a number suffix
         """
-        filtered_table_name = filter_name(xql_table.name)
         table_names = [table.name for table in self.tables]
         if xql_table.name in table_names:
             prefix = 2
-            temp_table_name = filtered_table_name + '_1'
+            temp_table_name = xql_table.name + '_1'
             while temp_table_name in table_names:
                 temp_table_name = '{table}_{pre}'.format(table = table.name, pre = prefix)
                 prefix += 1
@@ -101,13 +101,18 @@ class XqlTable(object):
 ####### Parsing #######
 
 def filter_name(name):
-    """ 
+    """
     Validate the name to match SQL names
     Turns any non-word (letters/numbers/underscore) into an underscore
     """
-    
+
     filtered_name = re.sub('\W', '_', name).upper()
+    filtered_name = re.sub('[_]+', '_', filtered_name)
     filtered_name_stripped = filtered_name.strip('_')
+
+    print filtered_name_stripped
+    if not filtered_name_stripped:
+        raise UnicodeError('File name, sheet name, or header names may not contain UNICODE!')
 
     #if the name is a sqlite3 keyword, add 'Xql_' prefix
     if filtered_name_stripped in SQLITE3_KEYWORDS:
@@ -127,7 +132,7 @@ def parse_multiple_xls_to_db(xls_paths, rows_per_iter):
 def parse_xls_to_schema(index, xls_path, rows_per_iter):
 
     file_name = os.path.splitext(os.path.basename(xls_path))[0]
-    schema = XqlSchema(filter_name(file_name))
+    schema = XqlSchema(file_name)
     source_workbook = xlrd.open_workbook(xls_path)
 
     #Parse each sheet in the xls file
@@ -148,10 +153,10 @@ def parse_sheet_to_table(workbook, sheet, rows_per_iter, index):
 
     #minimum 1 rows (only header)
     if last_col >= 0:
-        sheet_name = filter_name(sheet.name)
+        table = XqlTable(sheet.name)
         if index != -1:
-            sheet_name = 'DB{num}_{name}'.format(num = index, name = sheet_name)
-        table = XqlTable(sheet_name)
+            sheet_name = 'DB{num}_{name}'.format(num = index, name = table.name)
+
 
         #If we want to find where the table actually starts (might not start at 0, 0),
         #we have to start from the last filled cell and go back until we get to the first cell

@@ -21,10 +21,12 @@ class MainWidget(QtGui.QMainWindow):
     """
     Main window class - Events, widgets and general design.
     """
+    UnicodeSignal = QtCore.pyqtSignal()
 
     def __init__(self):
         super(MainWidget, self).__init__()
         self.loading_gif_path = "loading.gif"
+        self.UnicodeSignal.connect(self.show_unicode_popup)
         self.initUI()
 
     def initUI(self):
@@ -150,6 +152,12 @@ class MainWidget(QtGui.QMainWindow):
 
             """)
 
+    def show_unicode_popup(self):
+        self.unicode_popup = QtGui.QMenu(self.centralWidget)
+        self.unicode_popup.setWindowTitle('Error')
+
+        self.unicode_popup.showMessage('Files names, header names and sheet names cannot contain unicode!')
+        self.unicode_popup.show()
 
     def addFileToTree(self, xql_db_obj):
         """
@@ -330,11 +338,24 @@ class MainWidget(QtGui.QMainWindow):
         """
         Begin writing the DB behind the scenes, clear the screen and when done transform the screen to the query interface.
         """
-        self.writer = DBWriter(self.file_paths)
+
+        if not self.writer:
+            #If no db has been created
+            try:
+                self.writer = DBWriter(self.file_paths)
+                #self.startBtn.setEnabled(False) # Once DB has been initialized, user shouldn't be able to click this button to init again.
+                self.create_db()
+                self.db_creation_complete()
+            except UnicodeError:
+                self.UnicodeSignal.emit()
+        else:
+            #If db has already been created, add new schemas
+            self.writer.XqlDB.add_xls(self.file_paths)
+
+
+
         self.writer = None
-        self.startBtn.setEnabled(False) # Once DB has been initialized, user shouldn't be able to click this button to init again.
-        self.create_db()
-        self.db_creation_complete()
+
 
        
     def create_db(self):
