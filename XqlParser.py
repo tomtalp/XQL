@@ -16,10 +16,27 @@ SQLITE3_KEYWORDS = ['ABORT', 'ACTION', 'ADD', 'AFTER', 'ALL', 'ALTER', 'ANALYZE'
 class XqlDB(object):
     def __init__(self):
         self.name = 'MyDB'
-        self.schemes = []
+        self.schemas = []
 
-    def add_table(self, table):
-        self.tables.append(table)
+    def add_schema(self, xql_schema):
+        schema_names = [schema.name for schema in self.schemas]
+        if xql_schema.name in schema_names:
+            suffix = 2
+            temp_schema_name = schema.name + '_1'
+            while temp_schema_name in schema_names:
+                temp_schema_name = schema.name + '_' + str(suffix)
+                suffix += 1
+            xql_schema.name = temp_schema_name
+
+        self.schemas.append(xql_schema)
+
+    def get_table_names(self):
+        all_tables = []
+        for schema in self.schemas:
+            for table in schema.tables:
+                all_tables.append(table.name)
+        return all_tables
+
 
     def __str__(self):
         return self.name
@@ -27,6 +44,35 @@ class XqlDB(object):
     def __repr__(self):
         return self.__str__()
 
+class XqlSchema(object):
+    def __init__(self, name):
+        self.name = name
+        self.tables = []
+
+    def add_table(self, xql_table):
+        """
+        if the table already exists in another scheme, add DB{NUM} as start
+        """
+        print 'BEFORE: ' + xql_table.name
+        filtered_table_name = filter_name(xql_table.name)
+        table_names = [table.name for table in self.tables]
+        print 'TABLES: ' + str(table_names)
+        if xql_table.name in table_names:
+            prefix = 2
+            temp_table_name = filtered_table_name + '_1'
+            while temp_table_name in table_names:
+                temp_table_name = table.name + '_{pre}'.format(pre = prefix)
+                prefix += 1
+            print 'CHANGED'
+            xql_table.name = temp_table_name
+        self.tables.append(xql_table)
+        print 'AFTER: ' + xql_table.name
+
+
+    def __str__(self):
+        return self.name
+    def __repr__(self):
+        return self.__str__()
 
 class XqlTable(object):
     def __init__(self, name):
@@ -74,31 +120,42 @@ def filter_name(name):
 
 def parse_multiple_xls_to_db(xls_paths, rows_per_iter):
     parsed_db = XqlDB()
-    for xls_path in xls_paths:
-        parsed_db.schemes.append(parse_xls_to_scheme(parsed_db, xls_path))
+    for index, xls_path in enumerate(xls_paths):
+        if len(xls_paths) == 1:
+            schema = parse_xls_to_schema(-1, xls_path, rows_per_iter)
+        else:
+            schema = parse_xls_to_schema(index + 1, xls_path, rows_per_iter)
+        parsed_db.add_schema(schema)
+    return parsed_db
 
-def parse_xls_to_scheme(parsed_db, xls_path, rows_per_iter):
+def parse_xls_to_schema(index, xls_path, rows_per_iter):
+
     file_name = os.path.splitext(os.path.basename(xls_path))[0]
+    schema = XqlSchema(filter_name(file_name))
     source_workbook = xlrd.open_workbook(xls_path)
 
     #Parse each sheet in the xls file
     for sheet in source_workbook.sheets():
-        table = parse_sheet_to_table(source_workbook, sheet, rows_per_iter)
+        print 'Now parsing {file}, sheet "{sheet_name}"'.format(file = file_name, sheet_name = sheet.name)
+        table = parse_sheet_to_table(source_workbook, sheet, rows_per_iter, index)
 
         #Add only if table exists
         if table:
-            parsed_db.add_table(table)
+            schema.add_table(table)
 
-    return parsed_db
+    return schema
 
-def parse_sheet_to_table(workbook, sheet, rows_per_iter):
+def parse_sheet_to_table(workbook, sheet, rows_per_iter, index):
 
     last_row = sheet.nrows - 1
     last_col = sheet.ncols - 1
 
     #minimum 1 rows (only header)
     if last_col >= 0:
-        table = XqlTable(filter_name(sheet.name))
+        sheet_name = filter_name(sheet.name)
+        if index != -1:
+            sheet_name = 'DB{num}_{name}'.format(num = index, name = sheet_name)
+        table = XqlTable(sheet_name)
 
         #If we want to find where the table actually starts (might not start at 0, 0),
         #we have to start from the last filled cell and go back until we get to the first cell
@@ -259,10 +316,16 @@ def convert_cell_type(value, src_type, target_type, datemode):
 ####### End Parsing ###### end
 
 def main():
+    xls_paths = []
     xls_path = raw_input("Enter xls path:\n")
-    while not (os.path.isfile(xls_path) and os.path.splitext(xls_path)[1] in ('.xls', '.xlsx')):
+    while True:
+        if os.path.isfile(xls_path):
+            xls_paths.append(xls_path)
         xls_path = raw_input("Enter xls path:\n")
+        if xls_path == 'end':
+            break
     rows_per_iter = input("Enter number of rows you want the generator to return:\n")
     while not isinstance(rows_per_iter, int):
         rows_per_iter = input("Enter number of rows you want the generator to return:\n")
-    return parse_xls_to_db(xls_path, rows_per_iter)
+    print xls_paths
+    return parse_multiple_xls_to_db(xls_paths, rows_per_iter)
