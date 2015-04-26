@@ -169,9 +169,11 @@ class MainWidget(QtGui.QMainWindow):
         for schema in xql_db_obj.schemas:
             if not schema.processed: #Make sure it hasn't been added yet
                 tree_schema_obj = QtGui.QTreeWidgetItem(self.treeWidget, [schema.name])
+                tree_schema_obj.setExpanded(True)
 
                 for table in schema.tables:
                     tree_table_obj = QtGui.QTreeWidgetItem(tree_schema_obj, [table.name])
+                    tree_table_obj.setExpanded(True)
                     for col_name, col_type in table.headers.iteritems():
                         tree_header_obj = QtGui.QTreeWidgetItem(tree_table_obj, ["{col_name} ({col_type})".format(col_name = col_name, col_type = col_type)])
                 schema.processed = True
