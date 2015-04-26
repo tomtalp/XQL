@@ -21,10 +21,12 @@ class MainWidget(QtGui.QMainWindow):
     """
     Main window class - Events, widgets and general design.
     """
+    UnicodeSignal = QtCore.pyqtSignal()
 
     def __init__(self):
         super(MainWidget, self).__init__()
         self.loading_gif_path = "loading.gif"
+        self.UnicodeSignal.connect(self.show_unicode_popup)
         self.initUI()
 
     def initUI(self):
@@ -107,6 +109,8 @@ class MainWidget(QtGui.QMainWindow):
 
         self.setMenuBar(self.menubar)      
 
+        self.writer = None
+
         self.initStyleSheet()
         self.show()
 
@@ -150,19 +154,27 @@ class MainWidget(QtGui.QMainWindow):
 
             """)
 
+    def show_unicode_popup(self):
+        self.unicode_popup = QtGui.QMenu(self.centralWidget)
+        self.unicode_popup.setWindowTitle('Error')
+
+        self.unicode_popup.showMessage('Files names, header names and sheet names cannot contain unicode!')
+        self.unicode_popup.show()
 
     def addFileToTree(self, xql_db_obj):
         """
         Adds an Excel file to the side bar Tree Widget.
         """
 
-        tree_root_file = QtGui.QTreeWidgetItem(self.treeWidget, [xql_db_obj.name])
+        for schema in xql_db_obj.schemas:
+            if not schema.processed: #Make sure it hasn't been added yet
+                tree_schema_obj = QtGui.QTreeWidgetItem(self.treeWidget, [schema.name])
 
-        for table in xql_db_obj.tables:
-            tree_table_obj = QtGui.QTreeWidgetItem(tree_root_file, [table.name])
-            
-            for col_name, col_type in table.headers.iteritems():
-                tree_header_obj = QtGui.QTreeWidgetItem(tree_table_obj, ["{col_name} ({col_type})".format(col_name = col_name, col_type = col_type)])
+                for table in schema.tables:
+                    tree_table_obj = QtGui.QTreeWidgetItem(tree_schema_obj, [table.name])
+                    for col_name, col_type in table.headers.iteritems():
+                        tree_header_obj = QtGui.QTreeWidgetItem(tree_table_obj, ["{col_name} ({col_type})".format(col_name = col_name, col_type = col_type)])
+                schema.processed = True
 
     def initQueryButtons(self):
         """
@@ -282,13 +294,13 @@ class MainWidget(QtGui.QMainWindow):
         Handler for the 'open file' button. User picks a file and
         """
 
-        path = QtGui.QFileDialog.getOpenFileName(self, 'Pick an Excel file', os.getenv(get_os_env()),
+        paths = QtGui.QFileDialog.getOpenFileNames(self, 'Pick an Excel file', os.getenv(get_os_env()),
                                                      "Excel Files (*.xls *.xlsx)")
 
         # Change the screen only if a file was selected
-        if path:
-            self.file_path = str(path) # Convert QString to str
-            self.filePathLabel.setText("Selected {file_path}".format(file_path = self.file_path))
+        if paths:
+            self.file_paths = [str(path) for path in paths] # Convert QString to str
+            self.filePathLabel.setText("Selected {file_paths}".format(file_paths = ', '.join([os.path.basename(str(path)) for path in self.file_paths])))
             self.browseBtn.setText('Change file?')
             self.startBtn.setEnabled(True)  # Activate the button that begins the process
             self.tabWidget.setToolTip("Press the 'Go!' button to begin working")
@@ -330,19 +342,27 @@ class MainWidget(QtGui.QMainWindow):
         """
         Begin writing the DB behind the scenes, clear the screen and when done transform the screen to the query interface.
         """
-        self.writer = None
-        self.startBtn.setEnabled(False) # Once DB has been initialized, user shouldn't be able to click this button to init again.
-        self.create_db()
-        self.db_creation_complete()
 
-       
+        if not self.writer:
+            #If no db has been created
+            try:
+                self.create_db()
+                self.db_creation_complete()
+            except UnicodeError:
+                self.UnicodeSignal.emit()
+        else:
+            #If db has already been created, add new schemas
+            self.writer.add_xls(self.file_paths) #Adds them to the XqlDB
+            self.writer.write_to_db()
+            self.writing_thread.addToTreeSignal.emit(self.writer.XqlDB)
+
     def create_db(self):
         """
         Write the Excel file to the DB.
         When task is done, call the "creation_complete" function to modify the GUI
         """
         self.writing_thread.playLoadingSignal.emit()
-        self.writer = DBWriter(self.file_path)
+        self.writer = DBWriter(self.file_paths)
         self.writer.write_to_db()
 
     def db_creation_complete(self):

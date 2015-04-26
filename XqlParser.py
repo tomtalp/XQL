@@ -4,7 +4,7 @@
 #           This module gets a path to an XLS(X) file and parses it.
 #
 #           Sheets become tables
-#
+# 
 ################################################################################################
 from distutils.command.build_scripts import first_line_re
 
@@ -14,12 +14,32 @@ SQLITE3_KEYWORDS = ['ABORT', 'ACTION', 'ADD', 'AFTER', 'ALL', 'ALTER', 'ANALYZE'
 
 ####### Classes #######
 class XqlDB(object):
-    def __init__(self, name):
-        self.name = name
-        self.tables = []
+    def __init__(self):
+        self.name = 'MyDB'
+        self.schemas = []
 
-    def add_table(self, table):
-        self.tables.append(table)
+    def append_schema(self, xql_schema):
+        """
+        Check if schema name already exists, adds number suffix if it does
+        """
+
+        schema_names = [schema.name for schema in self.schemas]
+        if xql_schema.name in schema_names:
+            suffix = 2
+            temp_schema_name = schema.name + '_1'
+            while temp_schema_name in schema_names:
+                temp_schema_name = schema.name + '_' + str(suffix)
+                suffix += 1
+            xql_schema.name = temp_schema_name
+
+        self.schemas.append(xql_schema)
+
+    def add_xls(self, xls_paths, rows_per_iter):
+        """ parses more xls files after initial DB has been created"""
+        for xls_path in xls_paths:
+            if not xls_path in [xql_schema.full_path for xql_schema in self.schemas]: #Make sure the xls hasn't been parsed yet
+                schema = parse_xls_to_schema(len(self.schemas), xls_path, rows_per_iter)
+                self.append_schema(schema)
 
     def __str__(self):
         return self.name
@@ -27,10 +47,36 @@ class XqlDB(object):
     def __repr__(self):
         return self.__str__()
 
+class XqlSchema(object):
+    def __init__(self, full_path):
+        self.name = filter_name(os.path.splitext(os.path.basename(full_path))[0])
+        self.full_path = full_path
+        self.tables = []
+        self.processed = False #To know later if it has already been created
+
+    def add_table(self, xql_table):
+        """
+        if the table already exists in another scheme, add a number suffix
+        """
+        table_names = [table.name for table in self.tables]
+        if xql_table.name in table_names:
+            prefix = 2
+            temp_table_name = xql_table.name + '_1'
+            while temp_table_name in table_names:
+                temp_table_name = '{table}_{pre}'.format(table = table.name, pre = prefix)
+                prefix += 1
+            xql_table.name = temp_table_name
+        self.tables.append(xql_table)
+
+
+    def __str__(self):
+        return self.name
+    def __repr__(self):
+        return self.__str__()
 
 class XqlTable(object):
     def __init__(self, name):
-        self.name = name.upper()
+        self.name = filter_name(name)
         self.headers = {}
         self.gen_rows = None
 
@@ -59,42 +105,64 @@ class XqlTable(object):
 ####### Parsing #######
 
 def filter_name(name):
-    """ 
+    """
     Validate the name to match SQL names
     Turns any non-word (letters/numbers/underscore) into an underscore
     """
-    
+
     filtered_name = re.sub('\W', '_', name).upper()
+    filtered_name = re.sub('[_]+', '_', filtered_name)
     filtered_name_stripped = filtered_name.strip('_')
+
+    print filtered_name_stripped
+    if not filtered_name_stripped:
+        raise UnicodeError('File name, sheet name, or header names may not contain UNICODE!')
 
     #if the name is a sqlite3 keyword, add 'Xql_' prefix
     if filtered_name_stripped in SQLITE3_KEYWORDS:
         filtered_name_stripped = 'Xql_{name}'.format(name = filtered_name)
     return filtered_name_stripped
 
-def parse_xls_to_db(xls_path, rows_per_iter):
-    file_name = os.path.splitext(os.path.basename(xls_path))[0]
-    parsed_db = XqlDB(filter_name(file_name))
+def parse_multiple_xls_to_db(xls_paths, rows_per_iter):
+    parsed_db = XqlDB()
+    for index, xls_path in enumerate(xls_paths):
+        if len(xls_paths) == 1:
+            schema = parse_xls_to_schema(-1, xls_path, rows_per_iter)
+        else:
+            schema = parse_xls_to_schema(index + 1, xls_path, rows_per_iter)
+        parsed_db.append_schema(schema)
+    return parsed_db
+
+def parse_xls_to_schema(index, xls_path, rows_per_iter):
+
+    schema = XqlSchema(xls_path)
     source_workbook = xlrd.open_workbook(xls_path)
 
     #Parse each sheet in the xls file
     for sheet in source_workbook.sheets():
-        table = parse_sheet_to_table(source_workbook, sheet, rows_per_iter)
+        #print 'Now parsing {file}, sheet "{sheet_name}"'.format(file = file_name, sheet_name = sheet.name).decode('utf-8')
+        table = parse_sheet_to_table(source_workbook, sheet, rows_per_iter, index)
 
         #Add only if table exists
         if table:
-            parsed_db.add_table(table)
+            schema.add_table(table)
 
-    return parsed_db
+    return schema
 
-def parse_sheet_to_table(workbook, sheet, rows_per_iter):
+def parse_sheet_to_table(workbook, sheet, rows_per_iter, index):
 
     last_row = sheet.nrows - 1
     last_col = sheet.ncols - 1
 
     #minimum 1 rows (only header)
     if last_col >= 0:
-        table = XqlTable(filter_name(sheet.name))
+        if index != -1:
+            sheet_name = 'DB{num}_{name}'.format(num = index, name = sheet.name)
+        else:
+            sheet_name = sheet.name
+        table = XqlTable(sheet_name)
+
+
 
         #If we want to find where the table actually starts (might not start at 0, 0),
         #we have to start from the last filled cell and go back until we get to the first cell
@@ -255,10 +323,16 @@ def convert_cell_type(value, src_type, target_type, datemode):
 ####### End Parsing ###### end
 
 def main():
+    xls_paths = []
     xls_path = raw_input("Enter xls path:\n")
-    while not (os.path.isfile(xls_path) and os.path.splitext(xls_path)[1] in ('.xls', '.xlsx')):
+    while True:
+        if os.path.isfile(xls_path):
+            xls_paths.append(xls_path)
         xls_path = raw_input("Enter xls path:\n")
+        if xls_path == 'end':
+            break
     rows_per_iter = input("Enter number of rows you want the generator to return:\n")
     while not isinstance(rows_per_iter, int):
         rows_per_iter = input("Enter number of rows you want the generator to return:\n")
-    return parse_xls_to_db(xls_path, rows_per_iter)
+    print xls_paths
+    return parse_multiple_xls_to_db(xls_paths, rows_per_iter)
