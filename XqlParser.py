@@ -114,7 +114,6 @@ def filter_name(name):
     filtered_name = re.sub('[_]+', '_', filtered_name)
     filtered_name_stripped = filtered_name.strip('_')
 
-    print filtered_name_stripped
     if not filtered_name_stripped:
         raise UnicodeError('File name, sheet name, or header names may not contain UNICODE!')
 

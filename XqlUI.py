@@ -6,8 +6,8 @@ import XqlQueryManager, XqlParser
 
 class WritingThread(QtCore.QThread):
 
-    playLoadingSignal = QtCore.pyqtSignal()
-    stopLoadingSignal = QtCore.pyqtSignal()
+    playLoadingSignal = QtCore.pyqtSignal(QtGui.QLabel)
+    stopLoadingSignal = QtCore.pyqtSignal(QtGui.QLabel)
     addToTreeSignal = QtCore.pyqtSignal(XqlParser.XqlDB)
 
     def __init__(self, main_window):
@@ -25,7 +25,7 @@ class MainWidget(QtGui.QMainWindow):
 
     def __init__(self):
         super(MainWidget, self).__init__()
-        self.loading_gif_path = "loading.gif"
+        self.loading_gif_path = "ajax-loader4.gif"
         self.UnicodeSignal.connect(self.show_unicode_popup)
         self.initUI()
 
@@ -41,14 +41,14 @@ class MainWidget(QtGui.QMainWindow):
 
         # Main Vertical & Horizontal layout objects
         self.mainHorizontalLayout = QtGui.QHBoxLayout(self.centralWidget)
-        self.mainVerticalLayout = QtGui.QVBoxLayout()
-        self.sideTreeLayout = QtGui.QHBoxLayout()
+        self.mainVerticalLayout = QtGui.QVBoxLayout() # Main window - contains the query textbox, table widget & buttons etc.
+        self.sideBarLayout = QtGui.QVBoxLayout() # Contains tree widget & upload progress list.
 
-        self.mainHorizontalLayout.addLayout(self.sideTreeLayout)
+        self.mainHorizontalLayout.addLayout(self.sideBarLayout)
         self.mainHorizontalLayout.addLayout(self.mainVerticalLayout)
         
         self.treeWidget = QtGui.QTreeWidget(self.centralWidget)
-        self.sideTreeLayout.addWidget(self.treeWidget) 
+        self.sideBarLayout.addWidget(self.treeWidget) 
         self.treeWidget.setMaximumSize(QtCore.QSize(225, 16777215))
         treeHeader = QtGui.QTreeWidgetItem(["Files"])
         self.treeWidget.setHeaderItem(treeHeader)
@@ -56,7 +56,6 @@ class MainWidget(QtGui.QMainWindow):
         self.horizontalLayout = QtGui.QHBoxLayout()
         self.horizontalLayout.setContentsMargins(-1, -1, 0, -1)
         self.horizontalLayout_2 = QtGui.QHBoxLayout()     
-
 
         # Button for browsing files
         self.browseBtn = QtGui.QPushButton("Browse", self.centralWidget)
@@ -307,28 +306,25 @@ class MainWidget(QtGui.QMainWindow):
             self.startBtn.setEnabled(True)  # Activate the button that begins the process
             self.tabWidget.setToolTip("Press the 'Go!' button to begin working")
 
-    def playLoadingGif(self):
+    def playLoadingGif(self, gif_target_label):
         """
         Begin playing the loading gif
         """
         self.movie = QtGui.QMovie(self.loading_gif_path, QtCore.QByteArray(), self)
         size = self.movie.scaledSize()
 
-        self.movie_screen = QtGui.QLabel()
-        self.movie_screen.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
-
         self.movie.setCacheMode(QtGui.QMovie.CacheAll)
         self.movie.setSpeed(100)
-        self.loading_label.setMovie(self.movie)
+        gif_target_label.setMovie(self.movie)
         self.movie.start()
 
-    def stopLoadingGif(self):
+    def stopLoadingGif(self, gif_target_label):
         """
         Stop the loading gif
         """
         self.movie.stop()
-        self.loading_label.deleteLater()
-        self.loading_label = QtGui.QLabel("", self) # Initialize it again in case user uploads a new DB
+        gif_target_label.setText(" ")
+        self.movie.deleteLater()
 
     def beginProcessThread(self):
         self.writing_thread = WritingThread(self)
@@ -344,7 +340,6 @@ class MainWidget(QtGui.QMainWindow):
         """
         Begin writing the DB behind the scenes, clear the screen and when done transform the screen to the query interface.
         """
-
         if not self.writer:
             #If no db has been created
             try:
@@ -353,31 +348,33 @@ class MainWidget(QtGui.QMainWindow):
             except UnicodeError:
                 self.UnicodeSignal.emit()
         else:
+            self.writing_thread.playLoadingSignal.emit(self.loading_label)
+
             #If db has already been created, add new schemas
             self.writer.add_xls(self.file_paths) #Adds them to the XqlDB
             self.writer.write_to_db()
-            self.writing_thread.addToTreeSignal.emit(self.writer.XqlDB)
+            self.db_creation_complete()
 
     def create_db(self):
         """
         Write the Excel file to the DB.
-        When task is done, call the "creation_complete" function to modify the GUI
+        When task is done, enable buttons & tab
         """
-        self.writing_thread.playLoadingSignal.emit()
+        self.writing_thread.playLoadingSignal.emit(self.loading_label)
         self.writer = DBWriter(self.file_paths)
         self.writer.write_to_db()
 
-    def db_creation_complete(self):
-        """
-        Modify the GUI once the DB has been loaded - stop the .gif, enable buttons & populate the file tree.
-        """
-        self.writing_thread.stopLoadingSignal.emit()
         self.tabWidget.setEnabled(True) # The tabs can now be used
         self.tabWidget.setToolTip("") # Cancel the tooltip that instructs user to pick a file.
 
+    def db_creation_complete(self):
+        """
+        Modify the GUI once the DB has been loaded - stop the .gif & populate the file tree.
+        """
+        self.writing_thread.stopLoadingSignal.emit(self.loading_label)
+        
         xql_db = self.writer.XqlDB
         self.writing_thread.addToTreeSignal.emit(xql_db)
-
 
     def check_state(self, *args, **kwargs):
         """
@@ -484,8 +481,6 @@ class MainWidget(QtGui.QMainWindow):
             self.showMoreBtn.setEnabled(False)
             self.showAllBtn.setEnabled(False)
 
-
-
 def get_os_env():
     """
     Get the proper os environment variable, depending on the OS
@@ -500,7 +495,6 @@ def get_os_env():
     else:
         # TODO: Deal with other systems
         raise Exception("What OS are you using......")
-
 
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
