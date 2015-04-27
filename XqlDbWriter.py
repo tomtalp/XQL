@@ -26,11 +26,7 @@ class DBWriter(object):
         for schema in self.XqlDB.schemas:
             if not schema.processed:
                 for tb in schema.tables:
-                    print 'starting with '
-                    print tb
                     self.create_tb(tb)
-                    print 'done with '
-                    print tb
 
     def create_tb(self, tb):
         """
@@ -44,7 +40,6 @@ class DBWriter(object):
                 {cols}
             )
         """.format(tb_name = tb.name.upper(), cols = cols_for_query)
-        print creation_query
         self.cursor.execute(creation_query)
 
         insertion_query = """
