@@ -1,13 +1,82 @@
 from PyQt4 import QtGui, QtCore
 from XqlDbWriter import DBWriter
-from XqlParser import XqlDB
-import sys, os
-import XqlQueryManager, XqlParser
+import XqlQueryManager
+import XqlParser
+import sys
+import os
+
+class LoadingGif(object):
+    """
+    A custom object for managing QtGui.QMovie objects playing .gif images
+    """
+
+    def __init__(self, gif_target_label, target_widget):
+        self.loading_gif_path = "ajax-loader4.gif"
+        self.gif_target_label = gif_target_label
+        self.target_widget = target_widget
+
+        self.movie = QtGui.QMovie(self.loading_gif_path, QtCore.QByteArray(), target_widget)
+        size = self.movie.scaledSize()
+
+        self.movie.setCacheMode(QtGui.QMovie.CacheAll)
+        self.movie.setSpeed(100)
+
+        self.gif_target_label.setMovie(self.movie)
+        
+    def play_gif(self):
+        """
+        Start the QMovie object
+        """
+        self.movie.start()
+
+    def stop_gif(self):
+        """
+        Stop the QMovie object & delete the unnecessary Qt objects
+        """
+        self.movie.stop()
+        self.movie.deleteLater()
+        self.gif_target_label.setText(" ")
+
+class LoadingDialog(QtGui.QDialog):
+    """
+    Custom dialog for the loading dialog shown when user uploads a file
+    """
+
+    def __init__(self):
+        super(LoadingDialog, self).__init__()
+
+        self.loading_gif_label_for_dialog = QtGui.QLabel("")
+        self.loading_dialog_msg = QtGui.QLabel("We're preparing your file, hang tight!")
+
+        self.loading_layout_for_dialog = QtGui.QVBoxLayout()
+        self.loading_layout_for_dialog.addWidget(self.loading_dialog_msg)
+        self.loading_layout_for_dialog.addWidget(self.loading_gif_label_for_dialog)
+
+        self.setLayout(self.loading_layout_for_dialog)       
+
+    def show(self):
+        """
+        Override the QDialog "show" method - Show the dialog & play the gif
+        """
+        self.loading_gif = LoadingGif(self.loading_gif_label_for_dialog, self)
+        self.loading_gif.play_gif()
+        super(LoadingDialog, self).show()
+
+    def close(self):
+        """
+        Override the QDialog "close" method - Close the dialog & stop the gif
+        """
+        self.loading_gif.stop_gif()
+        super(LoadingDialog, self).close()
+
 
 class WritingThread(QtCore.QThread):
+    """
+    Seperate thread for writing excel files to the DB.
+    """
 
-    playLoadingSignal = QtCore.pyqtSignal(QtGui.QLabel)
-    stopLoadingSignal = QtCore.pyqtSignal(QtGui.QLabel)
+    playLoadingSignal = QtCore.pyqtSignal()
+    stopLoadingSignal = QtCore.pyqtSignal()
     addToTreeSignal = QtCore.pyqtSignal(XqlParser.XqlDB)
 
     def __init__(self, main_window):
@@ -108,7 +177,10 @@ class MainWidget(QtGui.QMainWindow):
 
         self.setMenuBar(self.menubar)      
 
-        self.writer = None
+        self.writer = None # Set the reference to the writer obj to none     
+
+        # self.loading_dialog = LoadingDialog()
+        # self.loading_dialog.show()
 
         self.initStyleSheet()
         self.show()
@@ -327,28 +399,41 @@ class MainWidget(QtGui.QMainWindow):
         self.movie.deleteLater()
 
     def beginProcessThread(self):
+        """
+        Create signals & start the writing thread
+        """
         self.writing_thread = WritingThread(self)
+        self.loading_dialog = LoadingDialog() # Will be used for the loading dialog presented to the user when file is uploaded.
 
         #Signals
-        self.writing_thread.playLoadingSignal.connect(self.playLoadingGif)
-        self.writing_thread.stopLoadingSignal.connect(self.stopLoadingGif)
+        self.writing_thread.playLoadingSignal.connect(self.loading_dialog.show)
+        self.writing_thread.stopLoadingSignal.connect(self.loading_dialog.close)
         self.writing_thread.addToTreeSignal.connect(self.addFileToTree)
 
         self.writing_thread.start()
+        
+        #self.loading_dialog1.show()
 
     def beginProcess(self):
         """
-        Begin writing the DB behind the scenes, clear the screen and when done transform the screen to the query interface.
-        """
+        Write the DB & show the loading dialog.
+        """      
+
+        self.writing_thread.playLoadingSignal.emit()
+
+        # Check whether a DB has already been created.
+        # If not, begin by creating the database
         if not self.writer:
-            #If no db has been created
             try:
                 self.create_db()
                 self.db_creation_complete()
             except UnicodeError:
                 self.UnicodeSignal.emit()
+        
+        # If we enter this else, this isn't the first time an Excel has been loaded, and all we need to do is add the new file
+        # to the existing database.
         else:
-            self.writing_thread.playLoadingSignal.emit(self.loading_label)
+            #self.writing_thread.playLoadingSignal.emit(self.loading_label)
 
             #If db has already been created, add new schemas
             self.writer.add_xls(self.file_paths) #Adds them to the XqlDB
@@ -357,24 +442,25 @@ class MainWidget(QtGui.QMainWindow):
 
     def create_db(self):
         """
-        Write the Excel file to the DB.
-        When task is done, enable buttons & tab
+        Create a database from the Excel file.
         """
-        self.writing_thread.playLoadingSignal.emit(self.loading_label)
+        #self.writing_thread.playLoadingSignal.emit(self.loading_label)
         self.writer = DBWriter(self.file_paths)
         self.writer.write_to_db()
-
-        self.tabWidget.setEnabled(True) # The tabs can now be used
-        self.tabWidget.setToolTip("") # Cancel the tooltip that instructs user to pick a file.
+       
 
     def db_creation_complete(self):
         """
-        Modify the GUI once the DB has been loaded - stop the .gif & populate the file tree.
+        Modify the GUI once the DB has been loaded
         """
-        self.writing_thread.stopLoadingSignal.emit(self.loading_label)
+        
+        self.writing_thread.stopLoadingSignal.emit()
         
         xql_db = self.writer.XqlDB
         self.writing_thread.addToTreeSignal.emit(xql_db)
+
+        self.tabWidget.setEnabled(True) # The tabs can now be used
+        self.tabWidget.setToolTip("") # Cancel the tooltip that instructs user to pick a file.
 
     def check_state(self, *args, **kwargs):
         """
