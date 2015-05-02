@@ -11,7 +11,7 @@ class LoadingGif(object):
     """
 
     def __init__(self, gif_target_label, target_widget):
-        self.loading_gif_path = "ajax-loader4.gif"
+        self.loading_gif_path = "loading.gif"
         self.gif_target_label = gif_target_label
         self.target_widget = target_widget
 
@@ -121,7 +121,6 @@ class MainWidget(QtGui.QMainWindow):
 
     def __init__(self):
         super(MainWidget, self).__init__()
-        self.loading_gif_path = "ajax-loader4.gif"
         self.UnicodeSignal.connect(self.show_unicode_popup)
         self.initUI()
 
@@ -401,26 +400,6 @@ class MainWidget(QtGui.QMainWindow):
             self.browseBtn.setText('Change file?')
             self.startBtn.setEnabled(True)  # Activate the button that begins the process
             self.tabWidget.setToolTip("Press the 'Go!' button to begin working")
-
-    def playLoadingGif(self, gif_target_label):
-        """
-        Begin playing the loading gif
-        """
-        self.movie = QtGui.QMovie(self.loading_gif_path, QtCore.QByteArray(), self)
-        size = self.movie.scaledSize()
-
-        self.movie.setCacheMode(QtGui.QMovie.CacheAll)
-        self.movie.setSpeed(100)
-        gif_target_label.setMovie(self.movie)
-        self.movie.start()
-
-    def stopLoadingGif(self, gif_target_label):
-        """
-        Stop the loading gif
-        """
-        self.movie.stop()
-        gif_target_label.setText(" ")
-        self.movie.deleteLater()
 
     def beginProcessThread(self):
         """
