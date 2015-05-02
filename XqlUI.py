@@ -39,7 +39,7 @@ class LoadingGif(object):
 
 class LoadingDialog(QtGui.QDialog):
     """
-    Custom dialog for the loading dialog shown when user uploads a file
+    Custom QDialog for the loading dialog shown when user uploads a file
     """
 
     def __init__(self):
@@ -52,7 +52,7 @@ class LoadingDialog(QtGui.QDialog):
         self.loading_layout_for_dialog.addWidget(self.loading_dialog_msg)
         self.loading_layout_for_dialog.addWidget(self.loading_gif_label_for_dialog)
 
-        self.setLayout(self.loading_layout_for_dialog)       
+        self.setLayout(self.loading_layout_for_dialog)
 
     def show(self):
         """
@@ -69,6 +69,33 @@ class LoadingDialog(QtGui.QDialog):
         self.loading_gif.stop_gif()
         super(LoadingDialog, self).close()
 
+class ErrorMessageBox(QtGui.QMessageBox):
+    """
+    Custom QMessageBox for errors
+    """
+    def __init__(self, target_widget, full_error = None, window_title = "XQL Error", short_error = "XQL has found an error...", unexpected_error = False):
+        super(ErrorMessageBox, self).__init__(target_widget)
+
+        self.window_title = window_title
+        self.short_error = short_error
+        self.full_error = full_error
+        self.unexpected_error = unexpected_error
+        
+        if self.unexpected_error:
+            self.short_error = "An unexpected error has occurred... Please contact us on GitHub with the error details so we can solve it!"
+
+        self.init_dialog()
+
+        self.show()
+
+    def init_dialog(self):
+        """
+        Initialize the error dialog
+        """
+        self.setWindowTitle(self.window_title)
+        self.setText(self.short_error)
+        if self.full_error:
+            self.setDetailedText(self.full_error)
 
 class WritingThread(QtCore.QThread):
     """
@@ -178,9 +205,6 @@ class MainWidget(QtGui.QMainWindow):
         self.setMenuBar(self.menubar)      
 
         self.writer = None # Set the reference to the writer obj to none     
-
-        # self.loading_dialog = LoadingDialog()
-        # self.loading_dialog.show()
 
         self.initStyleSheet()
         self.show()
@@ -411,8 +435,6 @@ class MainWidget(QtGui.QMainWindow):
         self.writing_thread.addToTreeSignal.connect(self.addFileToTree)
 
         self.writing_thread.start()
-        
-        #self.loading_dialog1.show()
 
     def beginProcess(self):
         """
@@ -433,8 +455,6 @@ class MainWidget(QtGui.QMainWindow):
         # If we enter this else, this isn't the first time an Excel has been loaded, and all we need to do is add the new file
         # to the existing database.
         else:
-            #self.writing_thread.playLoadingSignal.emit(self.loading_label)
-
             #If db has already been created, add new schemas
             self.writer.add_xls(self.file_paths) #Adds them to the XqlDB
             self.writer.write_to_db()
@@ -444,10 +464,8 @@ class MainWidget(QtGui.QMainWindow):
         """
         Create a database from the Excel file.
         """
-        #self.writing_thread.playLoadingSignal.emit(self.loading_label)
         self.writer = DBWriter(self.file_paths)
-        self.writer.write_to_db()
-       
+        self.writer.write_to_db()      
 
     def db_creation_complete(self):
         """
@@ -506,14 +524,18 @@ class MainWidget(QtGui.QMainWindow):
             else:
                 results_to_return = int(results_to_return_text)
 
+            try:
+                self.query_manager = XqlQueryManager.XqlQuery(self.writer.cursor, query, results_to_return, python_date_format)
+                headers = self.query_manager.headers
+                data = self.query_manager.get_results()
+                self.add_items_to_table(self.tableWidget, data, True, self.query_manager.headers)
 
-            self.query_manager = XqlQueryManager.XqlQuery(self.writer.cursor, query, results_to_return, python_date_format)
+            except XqlQueryManager.XqlInvalidQuery, invalid_query_error:
+                err = ErrorMessageBox(target_widget = self, short_error = invalid_query_error.msg)
 
-            headers = self.query_manager.headers
-            data = self.query_manager.get_results()
-
-            self.add_items_to_table(self.tableWidget, data, True, self.query_manager.headers)
-
+            except Exception, e:
+                err = ErrorMessageBox(target_widget = self, unexpected_error = True, full_error = e.message)                           
+            
     def add_items_to_table(self, tableWidget, data, first = False, headers = ''):
         """
         Adds data to the TableWidget
