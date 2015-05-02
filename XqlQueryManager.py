@@ -1,5 +1,6 @@
 import datetime
 import sqlparse
+import sqlite3
 
 class XqlQuery(object):
 	def __init__(self, cursor, query, results_to_return = 20, date_format = '%d/%m/%Y %H:%M:%S'):
@@ -33,7 +34,7 @@ class XqlQuery(object):
 
 		for query in self.parsed_user_query:
 			if query.get_type() != 'SELECT':
-				raise XqlInvalidQuery("We only accept SELECT queries at the moment! Please modify your query...")
+				raise XqlInvalidQuery("We only accept SELECT queries! Please modify your query...")
 
 	def __exec_query(self):
 		"""
@@ -44,7 +45,11 @@ class XqlQuery(object):
 
 		first_q = self.parsed_user_query[0]
 
-		self.cursor.execute(first_q.to_unicode())
+		try:
+			self.cursor.execute(first_q.to_unicode())
+		except sqlite3.OperationalError, sqlite_error:
+			error_msg = "Error! " + sqlite_error.message
+			raise XqlInvalidQuery(error_msg)
 
 	def __get_headers(self):
 		"""

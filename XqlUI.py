@@ -534,7 +534,8 @@ class MainWidget(QtGui.QMainWindow):
                 err = ErrorMessageBox(target_widget = self, short_error = invalid_query_error.msg)
 
             except Exception, e:
-                err = ErrorMessageBox(target_widget = self, unexpected_error = True, full_error = e.message)                           
+                err = ErrorMessageBox(target_widget = self, unexpected_error = True, full_error = e.message)   
+                     
             
     def add_items_to_table(self, tableWidget, data, first = False, headers = ''):
         """
