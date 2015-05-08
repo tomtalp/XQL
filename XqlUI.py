@@ -2,7 +2,6 @@ from PyQt4 import QtGui, QtCore
 from XqlDbWriter import DBWriter
 import XqlQueryManager
 import XqlParser
-import sys
 import os
 
 class LoadingGif(object):
@@ -143,14 +142,14 @@ class WritingThread(QtCore.QThread):
     def run(self):
         self.main_window.beginProcess()
 
-class MainWidget(QtGui.QMainWindow):
+class XqlMainWidget(QtGui.QMainWindow):
     """
     Main window class - Events, widgets and general design.
     """
     UnicodeSignal = QtCore.pyqtSignal()
 
     def __init__(self):
-        super(MainWidget, self).__init__()
+        super(XqlMainWidget, self).__init__()
         self.UnicodeSignal.connect(self.show_unicode_popup)
         self.initUI()
 
@@ -612,9 +611,3 @@ def get_os_env():
     else:
         # TODO: Deal with other systems
         raise Exception("What OS are you using......")
-
-if __name__ == '__main__':
-    app = QtGui.QApplication(sys.argv)
-    
-    w = MainWidget()
-    sys.exit(app.exec_())
