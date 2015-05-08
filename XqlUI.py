@@ -45,6 +45,8 @@ class LoadingDialog(QtGui.QDialog):
     def __init__(self):
         super(LoadingDialog, self).__init__()
 
+        self.__close_flag = False # Set to True when called by the close() method, so we know this isn't a user initiated close
+
         self.loading_gif_label_for_dialog = QtGui.QLabel("")
         self.loading_dialog_msg = QtGui.QLabel("We're preparing your file, hang tight!")
 
@@ -52,7 +54,17 @@ class LoadingDialog(QtGui.QDialog):
         self.loading_layout_for_dialog.addWidget(self.loading_dialog_msg)
         self.loading_layout_for_dialog.addWidget(self.loading_gif_label_for_dialog)
 
+        self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+
         self.setLayout(self.loading_layout_for_dialog)
+        self.setFixedSize(300, 100)
+
+        # Center the dialog in the middle of the screen
+        dialog_size = self.size()
+        desktop_size = QtGui.QDesktopWidget().screenGeometry()
+        top_pos = (desktop_size.height()/2) - (dialog_size.height()/2)
+        left_pos = (desktop_size.width()/2) - (dialog_size.width()/2)
+        self.move(left_pos, top_pos)
 
     def show(self):
         """
@@ -67,7 +79,25 @@ class LoadingDialog(QtGui.QDialog):
         Override the QDialog "close" method - Close the dialog & stop the gif
         """
         self.loading_gif.stop_gif()
+
+        self.__close_flag = True
         super(LoadingDialog, self).close()
+
+    def closeEvent(self, event):
+        """
+        Ignore the close event sent by users clicking "X", and accept only when event is trigger from within the code.
+        """
+        if self.__close_flag:
+            event.accept()
+        else:
+            event.ignore()
+
+    def keyPressEvent(self, event):
+        """
+        Ignore the close trigger fired when user clicks "Escape"
+        """
+        if event.key() == QtCore.Qt.Key_Escape:
+            pass
 
 class ErrorMessageBox(QtGui.QMessageBox):
     """
