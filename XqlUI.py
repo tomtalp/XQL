@@ -284,10 +284,6 @@ class MainWidget(QtGui.QMainWindow):
         self.execButton.clicked.connect(self.sendQuery)
         self.horizontalLayout_6.addWidget(self.execButton)
 
-        self.stopButton = QtGui.QPushButton("Stop", self.queryTab)
-        self.stopButton.setMaximumSize(QtCore.QSize(100, 25))
-        self.horizontalLayout_6.addWidget(self.stopButton)
-
         self.showMoreBtn = QtGui.QPushButton("Show Next", self.queryTab)
         self.showMoreBtn.setMaximumSize(QtCore.QSize(100, 25))
         self.showMoreBtn.clicked.connect(self.get_more_results)
