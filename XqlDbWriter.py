@@ -11,7 +11,6 @@ class DBWriter(object):
         self.bulk_amount = bulk_amount
         self.XqlDB = XqlParser.parse_multiple_xls_to_db(file_paths, self.bulk_amount)
 
-        # Write to memory and not to disk to avoid dbs staying on the users system after program has exited (will happen in case of crashes i.e)
         self.db_conn = sqlite3.connect(":memory:", check_same_thread = False)
         self.cursor = self.db_conn.cursor()
 
@@ -55,12 +54,6 @@ class DBWriter(object):
 
 
         self.db_conn.commit()
-
-# file_path = '/home/user/Desktop/Transactions.xls'
-# file_path = '/home/user/Desktop/TestExcel.xls'
-#file_path = '/home/user/Desktop/test.xlsx'
-file_path = '/home/user/Desktop/busfin.xls'
-
 
 
 
