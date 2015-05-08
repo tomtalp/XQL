@@ -456,6 +456,8 @@ class MainWidget(QtGui.QMainWindow):
         self.tabWidget.setEnabled(True) # The tabs can now be used
         self.tabWidget.setToolTip("") # Cancel the tooltip that instructs user to pick a file.
 
+        self.startBtn.setEnabled(False) # Disable the "Go!" button until user picks a new file.
+
     def check_state(self, *args, **kwargs):
         """
         Checks the state of results_to_return_text and changes its color accordingly
