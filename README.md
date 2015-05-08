@@ -3,20 +3,25 @@ Xql - Query Excel files via SQL!
 
 **Xql** is a simple application that allows you to query your Excel files via SQL, and treat them as they were a regular database.
 
-Get the most out of your data - From simple SQL queries to complex queries & analysis on your data.
+With Xql you can get the most out of your data - From simple SQL queries to complex queries & analysis on your data.
 Join multiple sheets from different Excel files, use the familiar SQL functions and more! 
 
+#### How do I begin?
+
 Xql is extremely easy to use - All you have to do is select an Excel file 
+
 ![alt tag](http://i.imgur.com/kAhDNur.png) 
 
 
 
 Click the "Go!" button
+
 ![alt tag](http://i.imgur.com/pNmlKJe.png) 
 
 
 
 And begin Xqling!
+
 ![alt tag](http://i.imgur.com/3FB9pyM.png) 
 
 
