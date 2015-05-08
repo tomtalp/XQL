@@ -310,6 +310,7 @@ class MainWidget(QtGui.QMainWindow):
         Initialize the table widget
         """
         self.tableWidget = QtGui.QTableWidget(self.queryTab)
+        self.tableWidget.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers)
         self.tableWidget.setColumnCount(1)
         self.tableWidget.setRowCount(1)
         self.tabsVerticalLayout.addWidget(self.tableWidget)
