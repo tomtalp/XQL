@@ -121,7 +121,10 @@ class XqlQuery(object):
 				if isinstance(value_for_client, float) and value_for_client.is_integer():
 					value_for_client = int(value_for_client) 
 
-				value_for_client = str(value_for_client) # Convert numbers or anything else to strings
+				try:
+					value_for_client = str(value_for_client) # Convert numbers or anything else to strings
+				except UnicodeEncodeError:
+					value_for_client = unicode(value_for_client)
 
 				# Try converting to a datetime object to check if it's a date.
 				# SQLite dates are always returned in ISO-date format
