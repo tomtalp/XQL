@@ -527,7 +527,7 @@ class XqlMainWidget(QtGui.QMainWindow):
         """
 
         #Get query from user
-        query = str(self.queryTextEdit.toPlainText())
+        query = unicode(self.queryTextEdit.toPlainText())
 
         #Make sure query isn't empty
         if query.strip():
