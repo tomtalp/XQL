@@ -269,7 +269,7 @@ def get_column_xlrd_type(sheet, col, first_row, last_row):
 
     for i in xrange(first_row + 5, last_row + 1, 5):
         count += 1
-        until = min(i + 4, last_row)
+        until = min(i + 4, last_row) #to make sure the chosen row wont be bigger than the last row
         temp_type = sheet.cell_type(random.randint(i, until), col)
 
         #if 2 types are found, return 1 (VARCHAR)
