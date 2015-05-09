@@ -150,7 +150,7 @@ class XqlMainWidget(QtGui.QMainWindow):
 
     def __init__(self):
         super(XqlMainWidget, self).__init__()
-        self.UnicodeSignal.connect(self.show_unicode_popup)
+        self.UnicodeSignal.connect(self.show_unicode_popup_error)
         self.initUI()
 
     def initUI(self):
@@ -277,12 +277,16 @@ class XqlMainWidget(QtGui.QMainWindow):
 
             """)
 
-    def show_unicode_popup(self):
-        self.unicode_popup = QtGui.QMenu(self.centralWidget)
-        self.unicode_popup.setWindowTitle('Error')
+    def show_unicode_popup_error(self):
+        """
+        Show an error dialog regarding sheets with Unicode characters and close the loading-dialog.
+        Requires an independant function that'll be connected with signals to the external DbWriting thread (because we can't show a dialog from an external thread in the Qt thread)
+        """
+        if self.loading_dialog:
+            self.loading_dialog.close()
 
-        self.unicode_popup.showMessage('Files names, header names and sheet names cannot contain unicode!')
-        self.unicode_popup.show()
+        err = ErrorMessageBox(target_widget = self, short_error = "Sheet names cannot contain Unicode characters!", full_error = "Please make sure all your sheet names contain ASCII characters.")
+
 
     def addFileToTree(self, xql_db_obj):
         """
