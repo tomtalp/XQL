@@ -267,7 +267,7 @@ def get_column_xlrd_type(sheet, col, first_row, last_row):
     if cell_type == 1:
         return cell_type
 
-    for i in xrange(first_row + 5, last_row + 1, 5):
+    for i in xrange(first_row + 1, last_row + 1, 5):
         count += 1
         until = min(i + 4, last_row) #to make sure the chosen row wont be bigger than the last row
         temp_type = sheet.cell_type(random.randint(i, until), col)
@@ -299,7 +299,7 @@ def convert_cell_type(value, src_type, target_type, datemode):
             python_date = datetime.datetime(year, month, date, hour, minute, second)
             value = python_date.strftime('%d-%m-%Y %H:%M')
         elif src_type in ('FLOAT', 'BOOLEAN'):
-            value = str(value)
+            value = unicode(value)
     elif target_type == 'FLOAT':
         if src_type == 'BOOLEAN':
             value = float(True)
