@@ -298,8 +298,9 @@ def convert_cell_type(value, src_type, target_type, datemode):
             year, month, date, hour, minute, second = xlrd.xldate_as_tuple(value, datemode)
             python_date = datetime.datetime(year, month, date, hour, minute, second)
             value = python_date.strftime('%d-%m-%Y %H:%M')
-        elif src_type in ('FLOAT', 'BOOLEAN'):
+        elif src_type in ('FLOAT', 'BOOLEAN', 'VARCHAR'):
             value = unicode(value)
+
     elif target_type == 'FLOAT':
         if src_type == 'BOOLEAN':
             value = float(True)
