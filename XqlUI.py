@@ -421,11 +421,15 @@ class XqlMainWidget(QtGui.QMainWindow):
 
         # Change the screen only if a file was selected
         if paths:
-            self.file_paths = [str(path) for path in paths] # Convert QString to str
-            self.filePathLabel.setText("Selected {file_paths}".format(file_paths = ', '.join([os.path.basename(str(path)) for path in self.file_paths])))
-            self.browseBtn.setText('Change file?')
-            self.startBtn.setEnabled(True)  # Activate the button that begins the process
-            self.tabWidget.setToolTip("Press the 'Go!' button to begin working")
+            try:
+                self.file_paths = [str(path) for path in paths] # Convert QString to str    
+            except UnicodeEncodeError, e:
+                err = ErrorMessageBox(target_widget = self, short_error = "Please select a file with a valid name!", full_error = "Your file name must be ASCII characters only!")
+            else:                   
+                self.filePathLabel.setText("Selected {file_paths}".format(file_paths = ', '.join([os.path.basename(str(path)) for path in self.file_paths])))
+                self.browseBtn.setText('Change file?')
+                self.startBtn.setEnabled(True)  # Activate the button that begins the process
+                self.tabWidget.setToolTip("Press the 'Go!' button to begin working")
 
     def beginProcessThread(self):
         """
