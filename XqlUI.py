@@ -46,6 +46,7 @@ class LoadingDialog(QtGui.QDialog):
 
         self.__close_flag = False # Set to True when called by the close() method, so we know this isn't a user initiated close
 
+        self.setWindowTitle("Xql - Loading")
         self.loading_gif_label_for_dialog = QtGui.QLabel("")
         self.loading_dialog_msg = QtGui.QLabel("We're preparing your file, hang tight!")
 
