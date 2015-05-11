@@ -421,7 +421,7 @@ class XqlMainWidget(QtGui.QMainWindow):
         Handler for the 'open file' button. User picks a file and
         """
 
-        paths = QtGui.QFileDialog.getOpenFileNames(self, 'Pick Excel(s) File(s)', os.getenv(get_os_env()),
+        paths = QtGui.QFileDialog.getOpenFileNames(self, 'Pick Excel File(s)', os.getenv(get_os_env()),
                                                      "Excel Files (*.xls *.xlsx)")
 
         # Change the screen only if a file was selected
