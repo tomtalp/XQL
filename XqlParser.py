@@ -299,6 +299,8 @@ def convert_cell_type(value, src_type, target_type, datemode):
             python_date = datetime.datetime(year, month, date, hour, minute, second)
             value = python_date.strftime('%d-%m-%Y %H:%M')
         elif src_type in ('FLOAT', 'BOOLEAN', 'VARCHAR'):
+            if src_type == 'FLOAT' and int(value) == value: #Remove trailing .0 if it's an int
+                value = int(value)
             value = unicode(value)
 
     elif target_type == 'FLOAT':
