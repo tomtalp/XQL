@@ -235,6 +235,8 @@ class XqlMainWidget(QtGui.QMainWindow):
 
         self.writer = None # Set the reference to the writer obj to none     
 
+        self.clipboard = QtGui.QApplication.clipboard()
+
         self.initStyleSheet()
         self.show()
 
@@ -519,7 +521,38 @@ class XqlMainWidget(QtGui.QMainWindow):
         Key event for executing a query
         """
         if event.key() == QtCore.Qt.Key_F5:
+            print 'F5'
             self.sendQuery()
+        elif event.modifiers() & QtCore.Qt.ControlModifier: #Control pressed
+            if event.key() == QtCore.Qt.Key_C:
+                self.copySelectedRange()
+        elif event.key() == QtCore.Qt.Key_F1:
+            self.copySelectedRangeWithHeaders()
+
+    def copySelectedRangeWithHeaders(self):
+        to_copy = ''
+        selected = self.tableWidget.selectedRanges()
+        to_copy = "\t".join([unicode(self.tableWidget.horizontalHeaderItem(i).text()) for i in xrange(selected[0].leftColumn(), selected[0].rightColumn()+1)])
+        to_copy += '\n'
+        self.copySelectedRange(to_copy)
+
+    def copySelectedRange(self, to_copy = ''):
+        selected = self.tableWidget.selectedRanges()
+        for r in xrange(selected[0].topRow(), selected[0].bottomRow()+1):
+            for c in xrange(selected[0].leftColumn(), selected[0].rightColumn()+1):
+                try:
+                    to_copy += unicode(self.tableWidget.item(r,c).text()) + "\t"
+                except AttributeError:
+                    to_copy += "\t"
+            to_copy = to_copy[:-1] + "\n" #eliminate last '\t'
+        to_copy = to_copy[:-1] #eliminate last '\n'
+        self.clipboard.setText(to_copy)
+
+
+
+
+
+
 
     def sendQuery(self):
         """
