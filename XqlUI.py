@@ -1,7 +1,8 @@
 from PyQt4 import QtGui, QtCore
 from XqlDbWriter import DBWriter
 from xlsxwriter import Workbook
-import XqlParser, os, XqlQueryManager
+import XqlParser, XqlQueryManager
+from os import path, mkdir, getenv, name
 from subprocess import Popen
 
 class TableWidget(QtGui.QTableWidget):
@@ -60,7 +61,7 @@ class TableWidget(QtGui.QTableWidget):
 
     def export_to_excel(self, result_path = ''):
         if not result_path:
-            result_path = unicode(QtGui.QFileDialog.getSaveFileName(self, 'Save As', os.getenv(get_os_env()), "Excel (*.xlsx *.xls)"))
+            result_path = unicode(QtGui.QFileDialog.getSaveFileName(self, 'Save As', getenv(get_os_env()), "Excel (*.xlsx *.xls)"))
         result_file = Workbook(result_path)
         result_sheet = result_file.add_worksheet("Results")
 
@@ -82,23 +83,23 @@ class TableWidget(QtGui.QTableWidget):
     def open_as_excel(self):
         """ saves the excel file in temporary directory and opens it """
 
-        temp_dir = os.path.join(os.getenv('TEMP'), r'XQL')
-        if not os.path.exists(temp_dir):
+        temp_dir = path.join(getenv('TEMP'), r'XQL')
+        if not path.exists(temp_dir):
             #Creates the dir if non-existent
-            os.mkdir(temp_dir)
+            mkdir(temp_dir)
 
         file_name = 'tmp'
 
         new_temp = file_name + '.xlsx' #temp variable
         cur_num = 1 #filename suffix
 
-        while os.path.exists(os.path.join(temp_dir, new_temp)):
+        while path.exists(path.join(temp_dir, new_temp)):
             #Find a file_name that doesn't exist yet
             new_temp = file_name + str(cur_num) + '.xlsx'
             cur_num += 1
         file_name = new_temp
 
-        full_file_path = os.path.join(temp_dir, file_name)
+        full_file_path = path.join(temp_dir, file_name)
 
         #Save the file
         self.export_to_excel(full_file_path)
@@ -455,7 +456,7 @@ class XqlMainWidget(QtGui.QMainWindow):
         """
         Initialize the table widget
         """
-        self.tableWidget = TableWidget(self.queryTab, self.clipboard)
+        self.tableWidget = TableWidget(self.queryTab, self)
         self.tableWidget.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers)
         self.tableWidget.setColumnCount(1)
         self.tableWidget.setRowCount(1)
@@ -532,17 +533,17 @@ class XqlMainWidget(QtGui.QMainWindow):
         """
         Handler for the 'open file' button. User picks a file and
         """
-        paths = QtGui.QFileDialog.getOpenFileNames(self, 'Pick Excel File(s)', os.getenv(get_os_env()),
+        paths = QtGui.QFileDialog.getOpenFileNames(self, 'Pick Excel File(s)', getenv(get_os_env()),
                                                      "Excel Files (*.xls *.xlsx)")
 
         # Change the screen only if a file was selected
         if paths:
             try:
-                self.file_paths = [str(path) for path in paths] # Convert QString to str    
+                self.file_paths = [str(cur_path) for cur_path in paths] # Convert QString to str
             except UnicodeEncodeError, e:
                 err = ErrorMessageBox(target_widget = self, short_error = "Please select a file with a valid name!", full_error = "Your file name must be ASCII characters only!")
             else:                   
-                self.filePathLabel.setText("Selected {file_paths}".format(file_paths = ', '.join([os.path.basename(str(path)) for path in self.file_paths])))
+                self.filePathLabel.setText("Selected {file_paths}".format(file_paths = ', '.join([path.basename(str(cur_path)) for cur_path in self.file_paths])))
                 #self.browseBtn.setText('Change file?')
                 self.startBtn.setEnabled(True)  # Activate the button that begins the process
                 self.tabWidget.setToolTip("Press the 'Go!' button to begin working")
@@ -724,11 +725,11 @@ def get_os_env():
     Get the proper os environment variable, depending on the OS
     """
     # Linux
-    if os.name == 'posix':
+    if name == 'posix':
         return 'HOME'
 
     # Windows    
-    elif os.name == 'nt':
+    elif name == 'nt':
         return 'USERPROFILE'
     else:
         # TODO: Deal with other systems
