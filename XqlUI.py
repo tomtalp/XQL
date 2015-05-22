@@ -1,8 +1,118 @@
 from PyQt4 import QtGui, QtCore
 from XqlDbWriter import DBWriter
-import XqlQueryManager
-import XqlParser
-import os
+from xlsxwriter import Workbook
+import XqlParser, os, XqlQueryManager
+from subprocess import Popen
+
+class TableWidget(QtGui.QTableWidget):
+    """
+    custom QTableWidget that allow Copying with or without headers
+    """
+    def __init__(self, parent, main_window):
+        QtGui.QTableWidget.__init__(self, parent)
+        self.main_window = main_window
+
+    def contextMenuEvent(self, event):
+        menu = QtGui.QMenu(self)
+
+        menu.addAction("Copy", self.copy_selected_range, "CTRL+C")
+        menu.addAction("Copy With Headers", self.copy_selected_range_with_headers, "F1")
+        menu.addAction("Save As Excel", self.export_to_excel, "CTRL+E")
+        menu.addAction("Open As Excel", self.open_as_excel, "CTRL+O")
+
+        menu.exec_(self.mapToGlobal(QtCore.QPoint(event.pos().x(), event.pos().y() + 20))) #Open the context menu
+
+
+    def on_context_menu(self, point):
+        # show context menu
+        pass
+
+
+    def keyPressEvent(self, event):
+        if event.modifiers() & QtCore.Qt.ControlModifier: #Control pressed
+            if event.key() == QtCore.Qt.Key_C:
+                self.copy_selected_range()
+            elif event.key() == QtCore.Qt.Key_E:
+                self.export_to_excel()
+            elif event.key() == QtCore.Qt.Key_O:
+                self.open_as_excel()
+        elif event.key() == QtCore.Qt.Key_F1:
+            self.copy_selected_range_with_headers()
+
+    def copy_selected_range_with_headers(self):
+        to_copy = ''
+        selected = self.selectedRanges()
+        to_copy = "\t".join([unicode(self.horizontalHeaderItem(i).text()) for i in xrange(selected[0].leftColumn(), selected[0].rightColumn()+1)])
+        to_copy += '\n'
+        self.copy_selected_range(to_copy)
+
+    def copy_selected_range(self, to_copy = ''):
+        selected = self.selectedRanges()
+        for r in xrange(selected[0].topRow(), selected[0].bottomRow()+1):
+            for c in xrange(selected[0].leftColumn(), selected[0].rightColumn()+1):
+                try:
+                    to_copy += unicode(self.item(r,c).text()) + "\t"
+                except AttributeError:
+                    to_copy += "\t"
+            to_copy = to_copy[:-1] + "\n" #eliminate last '\t'
+        to_copy = to_copy[:-1] #eliminate last '\n'
+        self.main_window.clipboard.setText(to_copy)
+
+    def export_to_excel(self, result_path = ''):
+        if not result_path:
+            result_path = unicode(QtGui.QFileDialog.getSaveFileName(self, 'Save As', os.getenv(get_os_env()), "Excel (*.xlsx *.xls)"))
+        result_file = Workbook(result_path)
+        result_sheet = result_file.add_worksheet("Results")
+
+        last_row, last_col = self.rowCount(), self.columnCount()
+        print result_path
+        for col in xrange(0, last_col):
+            #Copy Column Names
+            result_sheet.write(0, col, unicode(self.horizontalHeaderItem(col).text()))
+
+        for row in xrange(0, last_row + 1):
+            for col in xrange(0, last_col):
+                #Copy Cell Values
+                try:
+                    result_sheet.write(row + 1, col, unicode(self.item(row, col).text()))
+                except AttributeError:
+                    pass
+        result_file.close()
+
+    def open_as_excel(self):
+        """ saves the excel file in temporary directory and opens it """
+
+        temp_dir = os.path.join(os.getenv('TEMP'), r'XQL')
+        if not os.path.exists(temp_dir):
+            #Creates the dir if non-existent
+            os.mkdir(temp_dir)
+
+        file_name = 'tmp'
+
+        new_temp = file_name + '.xlsx' #temp variable
+        cur_num = 1 #filename suffix
+
+        while os.path.exists(os.path.join(temp_dir, new_temp)):
+            #Find a file_name that doesn't exist yet
+            new_temp = file_name + str(cur_num) + '.xlsx'
+            cur_num += 1
+        file_name = new_temp
+
+        full_file_path = os.path.join(temp_dir, file_name)
+
+        #Save the file
+        self.export_to_excel(full_file_path)
+
+        #Open the file
+        Popen(full_file_path, shell=True)
+
+
+
+
+
+
+
+
 
 class LoadingGif(object):
     """
@@ -162,6 +272,8 @@ class XqlMainWidget(QtGui.QMainWindow):
         self.showMaximized()
         self.setWindowTitle("XQL")
 
+        self.clipboard = QtGui.QApplication.clipboard()
+
         self.centralWidget = QtGui.QWidget(self)
 
         # Main Vertical & Horizontal layout objects
@@ -234,8 +346,6 @@ class XqlMainWidget(QtGui.QMainWindow):
         self.setMenuBar(self.menubar)      
 
         self.writer = None # Set the reference to the writer obj to none     
-
-        self.clipboard = QtGui.QApplication.clipboard()
 
         self.initStyleSheet()
         self.show()
@@ -345,7 +455,7 @@ class XqlMainWidget(QtGui.QMainWindow):
         """
         Initialize the table widget
         """
-        self.tableWidget = QtGui.QTableWidget(self.queryTab)
+        self.tableWidget = TableWidget(self.queryTab, self.clipboard)
         self.tableWidget.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers)
         self.tableWidget.setColumnCount(1)
         self.tableWidget.setRowCount(1)
@@ -422,7 +532,6 @@ class XqlMainWidget(QtGui.QMainWindow):
         """
         Handler for the 'open file' button. User picks a file and
         """
-
         paths = QtGui.QFileDialog.getOpenFileNames(self, 'Pick Excel File(s)', os.getenv(get_os_env()),
                                                      "Excel Files (*.xls *.xlsx)")
 
@@ -523,35 +632,6 @@ class XqlMainWidget(QtGui.QMainWindow):
         if event.key() == QtCore.Qt.Key_F5:
             print 'F5'
             self.sendQuery()
-        elif event.modifiers() & QtCore.Qt.ControlModifier: #Control pressed
-            if event.key() == QtCore.Qt.Key_C:
-                self.copySelectedRange()
-        elif event.key() == QtCore.Qt.Key_F1:
-            self.copySelectedRangeWithHeaders()
-
-    def copySelectedRangeWithHeaders(self):
-        to_copy = ''
-        selected = self.tableWidget.selectedRanges()
-        to_copy = "\t".join([unicode(self.tableWidget.horizontalHeaderItem(i).text()) for i in xrange(selected[0].leftColumn(), selected[0].rightColumn()+1)])
-        to_copy += '\n'
-        self.copySelectedRange(to_copy)
-
-    def copySelectedRange(self, to_copy = ''):
-        selected = self.tableWidget.selectedRanges()
-        for r in xrange(selected[0].topRow(), selected[0].bottomRow()+1):
-            for c in xrange(selected[0].leftColumn(), selected[0].rightColumn()+1):
-                try:
-                    to_copy += unicode(self.tableWidget.item(r,c).text()) + "\t"
-                except AttributeError:
-                    to_copy += "\t"
-            to_copy = to_copy[:-1] + "\n" #eliminate last '\t'
-        to_copy = to_copy[:-1] #eliminate last '\n'
-        self.clipboard.setText(to_copy)
-
-
-
-
-
 
 
     def sendQuery(self):
