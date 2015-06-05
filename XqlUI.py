@@ -259,10 +259,12 @@ class XqlMainWidget(QtGui.QMainWindow):
     Main window class - Events, widgets and general design.
     """
     UnicodeSignal = QtCore.pyqtSignal()
+    SheetErrorSignal = QtCore.pyqtSignal(list)
 
     def __init__(self):
         super(XqlMainWidget, self).__init__()
         self.UnicodeSignal.connect(self.show_unicode_popup_error)
+        self.SheetErrorSignal.connect(self.show_sheet_popup_error)
         self.initUI()
 
     def initUI(self):
@@ -401,7 +403,11 @@ class XqlMainWidget(QtGui.QMainWindow):
 
         err = ErrorMessageBox(target_widget = self, short_error = "Sheet names cannot contain Unicode characters!", full_error = "Please make sure all your sheet names contain ASCII characters.")
 
-
+    def show_sheet_popup_error(self, failed_sheets):
+        """
+        Show an error dialog whenever a sheet cant be parsed
+        """
+        err = ErrorMessageBox(target_widget= self, short_error = "Error loading sheet(s)", full_error = "Couldn't parse sheets: {0}".format(', '.join(failed_sheets)))
     def addFileToTree(self, xql_db_obj):
         """
         Adds an Excel file to the side bar Tree Widget.
@@ -575,6 +581,9 @@ class XqlMainWidget(QtGui.QMainWindow):
             try:
                 self.create_db()
                 self.db_creation_complete()
+            except XqlParser.SheetException, e:
+                self.SheetErrorSignal.emit(e.value)
+
             except UnicodeError:
                 self.UnicodeSignal.emit()
         
@@ -590,7 +599,7 @@ class XqlMainWidget(QtGui.QMainWindow):
         """
         Create a database from the Excel file.
         """
-        self.writer = DBWriter(self.file_paths)
+        self.writer = DBWriter(self.file_paths, main_window = self)
         self.writer.write_to_db()      
 
     def db_creation_complete(self):

@@ -7,6 +7,14 @@ import datetime
 
 SQLITE3_KEYWORDS = ['ABORT', 'ACTION', 'ADD', 'AFTER', 'ALL', 'ALTER', 'ANALYZE', 'AND', 'AS', 'ASC', 'ATTACH', 'AUTOINCREMENT', 'BEFORE', 'BEGIN', 'BETWEEN', 'BY', 'CASCADE', 'CASE', 'CAST', 'CHECK', 'COLLATE', 'COLUMN', 'COMMIT', 'CONFLICT', 'CONSTRAINT', 'CREATE', 'CROSS', 'CURRENT_DATE', 'CURRENT_TIME', 'CURRENT_TIMESTAMP', 'DATABASE', 'DEFAULT', 'DEFERRABLE', 'DEFERRED', 'DELETE', 'DESC', 'DETACH', 'DISTINCT', 'DROP', 'EACH', 'ELSE', 'END', 'ESCAPE', 'EXCEPT', 'EXCLUSIVE', 'EXISTS', 'EXPLAIN', 'FAIL', 'FOR', 'FOREIGN', 'FROM', 'FULL', 'GLOB', 'GROUP', 'HAVING', 'IF', 'IGNORE', 'IMMEDIATE', 'IN', 'INDEX', 'INDEXED', 'INITIALLY', 'INNER', 'INSERT', 'INSTEAD', 'INTERSECT', 'INTO', 'IS', 'ISNULL', 'JOIN', 'KEY', 'LEFT', 'LIKE', 'LIMIT', 'MATCH', 'NATURAL', 'NO', 'NOT', 'NOTNULL', 'NULL', 'OF', 'OFFSET', 'ON', 'OR', 'ORDER', 'OUTER', 'PLAN', 'PRAGMA', 'PRIMARY', 'QUERY', 'RAISE', 'REFERENCES', 'REGEXP', 'REINDEX', 'RELEASE', 'RENAME', 'REPLACE', 'RESTRICT', 'RIGHT', 'ROLLBACK', 'ROW', 'SAVEPOINT', 'SELECT', 'SET', 'TABLE', 'TEMP', 'TEMPORARY', 'THEN', 'TO', 'TRANSACTION', 'TRIGGER', 'UNION', 'UNIQUE', 'UPDATE', 'USING', 'VACUUM', 'VALUES', 'VIEW', 'VIRTUAL', 'WHEN', 'WHERE']
 
+
+class SheetException(Exception):
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return repr(self.value)
+
 ####### Classes #######
 class XqlDB(object):
     def __init__(self):
@@ -117,17 +125,18 @@ def filter_name(name):
         filtered_name_stripped = 'Xql_{name}'.format(name = filtered_name)
     return filtered_name_stripped
 
-def parse_multiple_xls_to_db(xls_paths, rows_per_iter):
+def parse_multiple_xls_to_db(xls_paths, rows_per_iter, main_window = ''):
     parsed_db = XqlDB()
     for index, xls_path in enumerate(xls_paths):
         if len(xls_paths) == 1:
-            schema = parse_xls_to_schema(-1, xls_path, rows_per_iter)
+            schema = parse_xls_to_schema(-1, xls_path, rows_per_iter, main_window)
         else:
-            schema = parse_xls_to_schema(index + 1, xls_path, rows_per_iter)
+            schema = parse_xls_to_schema(index + 1, xls_path, rows_per_iter, main_window)
         parsed_db.append_schema(schema)
     return parsed_db
 
-def parse_xls_to_schema(index, xls_path, rows_per_iter):
+def parse_xls_to_schema(index, xls_path, rows_per_iter, main_window = ''):
+    failed_sheets = []
 
     schema = XqlSchema(xls_path)
     source_workbook = xlrd.open_workbook(xls_path)
@@ -135,11 +144,19 @@ def parse_xls_to_schema(index, xls_path, rows_per_iter):
     #Parse each sheet in the xls file
     for sheet in source_workbook.sheets():
         #print 'Now parsing {file}, sheet "{sheet_name}"'.format(file = file_name, sheet_name = sheet.name).decode('utf-8')
-        table = parse_sheet_to_table(source_workbook, sheet, rows_per_iter, index)
+        try:
+            table = parse_sheet_to_table(source_workbook, sheet, rows_per_iter, index)
+        except:
+            failed_sheets.append(sheet.name)
 
         #Add only if table exists
         if table:
             schema.add_table(table)
+
+    if failed_sheets and main_window:
+        #If main window is given (script is used by GUI), emit the signal show the unparsed sheets
+        main_window.SheetErrorSignal.emit(failed_sheets)
+
 
     return schema
 
