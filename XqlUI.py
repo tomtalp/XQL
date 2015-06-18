@@ -1,6 +1,6 @@
 from PyQt4 import QtGui, QtCore
 from XqlDbWriter import DBWriter
-from xlsxwriter import Workbook
+from xlsxwriter.workbook import Workbook
 import XqlParser, XqlQueryManager
 from os import path, mkdir, getenv, name
 from subprocess import Popen

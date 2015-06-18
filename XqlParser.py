@@ -146,12 +146,12 @@ def parse_xls_to_schema(index, xls_path, rows_per_iter, main_window = ''):
         #print 'Now parsing {file}, sheet "{sheet_name}"'.format(file = file_name, sheet_name = sheet.name).decode('utf-8')
         try:
             table = parse_sheet_to_table(source_workbook, sheet, rows_per_iter, index)
+            #Add only if table exists
+            if table:
+                schema.add_table(table)
         except:
             failed_sheets.append(sheet.name)
 
-        #Add only if table exists
-        if table:
-            schema.add_table(table)
 
     if failed_sheets and main_window:
         #If main window is given (script is used by GUI), emit the signal show the unparsed sheets
